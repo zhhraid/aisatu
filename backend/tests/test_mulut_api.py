@@ -238,6 +238,8 @@ def pasang_llm_tiruan(monkeypatch, penangan):
     monkeypatch.setenv("LLM_BASE_URL", "https://llm.contoh/v1/")
     monkeypatch.setenv("LLM_API_KEY", "kunci-uji")
     monkeypatch.setenv("LLM_MODEL", "model-uji")
+    monkeypatch.delenv("LLM_REASONING_EFFORT", raising=False)
+    monkeypatch.setattr(llm, "_pakai_format_json", True)
     asli = httpx.AsyncClient
     monkeypatch.setattr(
         llm.httpx, "AsyncClient", lambda **kw: asli(transport=httpx.MockTransport(penangan), **kw)
@@ -262,6 +264,8 @@ def test_klien_llm_mengirim_permintaan_yang_benar_dan_membaca_json(monkeypatch):
     assert terkirim["auth"] == "Bearer kunci-uji"
     assert terkirim["badan"]["model"] == "model-uji"
     assert terkirim["badan"]["response_format"] == {"type": "json_object"}
+    assert terkirim["badan"]["max_tokens"] == 2000  # cukup longgar untuk model yang berpikir dulu
+    assert "reasoning_effort" not in terkirim["badan"]
     assert [m["role"] for m in terkirim["badan"]["messages"]] == ["system", "user"]
 
 
@@ -288,3 +292,70 @@ def test_klien_llm_timeout_jatuh_ke_templat(monkeypatch):
     pasang_llm_tiruan(monkeypatch, penangan)
     hasil = asyncio.run(mulut.ringkasan_kelas([{"nama": "Raka", "macet": ["u"], "naik": []}]))
     assert hasil["sumber"] == "templat" and "Raka (bunyi u)" in hasil["ringkasan"]
+
+
+def test_klien_llm_meneruskan_reasoning_effort_dan_batas_token(monkeypatch):
+    import httpx, json
+
+    terkirim = {}
+
+    def penangan(permintaan):
+        terkirim.update(json.loads(permintaan.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+
+    pasang_llm_tiruan(monkeypatch, penangan)
+    monkeypatch.setenv("LLM_REASONING_EFFORT", "low")
+    monkeypatch.setenv("LLM_MAKS_TOKEN", "3000")
+    assert asyncio.run(llm.panggil_json("aturan", "data")) == {}
+    assert terkirim["reasoning_effort"] == "low" and terkirim["max_tokens"] == 3000
+
+
+def test_klien_llm_mencoba_lagi_tanpa_response_format_kalau_ditolak(monkeypatch):
+    import httpx, json
+
+    badan_masuk = []
+
+    def penangan(permintaan):
+        badan = json.loads(permintaan.content)
+        badan_masuk.append(badan)
+        if "response_format" in badan:
+            return httpx.Response(400, json={"error": {"message": "response_format tidak didukung"}})
+        return httpx.Response(200, json={"choices": [{"message": {"content": '{"ringkasan": "Baik."}'}}]})
+
+    pasang_llm_tiruan(monkeypatch, penangan)
+    assert asyncio.run(llm.panggil_json("aturan", "data")) == {"ringkasan": "Baik."}
+    assert ["response_format" in b for b in badan_masuk] == [True, False]
+    # Panggilan berikutnya langsung tanpa response_format, tidak membuang satu permintaan lagi.
+    assert asyncio.run(llm.panggil_json("aturan", "data")) == {"ringkasan": "Baik."}
+    assert ["response_format" in b for b in badan_masuk] == [True, False, False]
+
+
+@pytest.mark.parametrize(
+    "isi",
+    [
+        '{"ringkasan": "Baik."}',
+        '```json\n{"ringkasan": "Baik."}\n```',
+        'Berikut jawabannya:\n{"ringkasan": "Baik."}',
+    ],
+)
+def test_json_terbaca_walau_dibungkus(isi):
+    assert llm.urai_json(isi) == {"ringkasan": "Baik."}
+
+
+@pytest.mark.parametrize("isi", ["", "bukan json", "[1, 2]", "{rusak"])
+def test_bukan_objek_json_ditolak(isi):
+    assert llm.urai_json(isi) is None
+
+
+def test_keluaran_terpotong_jatuh_ke_templat(monkeypatch):
+    import httpx
+
+    def penangan(permintaan):
+        # Model kehabisan token saat berpikir: isi kosong, finish_reason "length".
+        return httpx.Response(
+            200, json={"choices": [{"finish_reason": "length", "message": {"content": None}}]}
+        )
+
+    pasang_llm_tiruan(monkeypatch, penangan)
+    hasil = asyncio.run(mulut.ringkasan_kelas([{"nama": "Raka", "macet": ["u"], "naik": []}]))
+    assert hasil["sumber"] == "templat"

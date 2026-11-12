@@ -14,7 +14,7 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 
 Sudah diuji:
 
-- Backend: 62 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
+- Backend: 72 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
 - Mata: 25 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
@@ -22,7 +22,7 @@ Belum diuji, dan harus kalian lakukan:
 
 - **Ambang aturan bibir belum disetel dengan wajah yang bergerak.** Angka di `mata/src/aturan.ts` masih tebakan. Uji di atas hanya memakai foto diam bermulut tertutup, jadi hanya bentuk "mengatup" yang terbukti lolos dan "a" yang terbukti gagal saat mulut tertutup.
 - **Belum pernah dicoba pada anak tunarungu.**
-- **Panggilan ke penyedia LLM sungguhan.** Klien HTTP-nya diuji dengan server tiruan; belum dengan kunci API asli.
+- **Panggilan ke Gemini sungguhan.** Klien HTTP-nya diuji dengan server tiruan dan alamat Gemini sudah dipastikan ada, tapi belum pernah dipanggil dengan kunci API asli.
 - **Kecepatan di HP.** Di lingkungan uji tanpa GPU hanya 6 sampai 9 frame per detik. Halaman uji menampilkan angka ini; cek di laptop sekolah dan HP Android murah.
 
 ## Menjalankan backend
@@ -47,12 +47,15 @@ Isi `.env`:
 
 | Variabel | Isi |
 | --- | --- |
-| `LLM_BASE_URL` | Alamat API yang kompatibel dengan OpenAI. Groq: `https://api.groq.com/openai/v1`. Gemini: `https://generativelanguage.googleapis.com/v1beta/openai` |
-| `LLM_API_KEY` | Kunci API. Hanya di server, jangan di-commit |
-| `LLM_MODEL` | Nama model di penyedia itu |
+| `LLM_BASE_URL` | Alamat API yang kompatibel dengan OpenAI. Gemini: `https://generativelanguage.googleapis.com/v1beta/openai`. Groq: `https://api.groq.com/openai/v1` |
+| `LLM_API_KEY` | Kunci API (untuk Gemini: dari Google AI Studio). Hanya di server, jangan di-commit |
+| `LLM_MODEL` | Nama model di penyedia itu, misalnya `gemini-3.5-flash-lite` |
+| `LLM_REASONING_EFFORT` | Opsional: `minimal`, `low`, `medium`, `high`. Untuk Gemini 3 pakai `low` supaya cepat |
+| `LLM_MAKS_TOKEN` | Batas token keluaran, bawaan 2000. Model yang berpikir dulu memakai sebagian untuk berpikir |
+| `LLM_BATAS_DETIK` | Batas waktu satu panggilan, bawaan 12 |
 | `SATU_DEMO` | `1` = pemilihan latihan tanpa acak dan endpoint data demo aktif |
 
-Kalau tiga variabel LLM kosong, atau panggilan gagal, semua teks memakai templat. Field `sumber` di jawaban berisi `llm` atau `templat`.
+Kalau tiga variabel pertama kosong, atau panggilan gagal, semua teks memakai templat. Field `sumber` di jawaban berisi `llm` atau `templat`. Kalau hasilnya `templat` padahal kunci sudah diisi, penyebabnya tercetak di log backend: kode HTTP dari penyedia, keluaran yang terpotong, atau keluaran yang ditolak pagar.
 
 ## Endpoint
 

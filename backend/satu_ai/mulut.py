@@ -9,6 +9,7 @@ Aturan yang dijaga di sini:
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Awaitable, Callable
 
@@ -16,6 +17,8 @@ from . import llm
 from .kurikulum import BANK_KATA, NAMA_TAHAP, NAMA_TINGKAT, SUKU_KATA, TEKS_LABEL
 
 PemanggilLLM = Callable[[str, str], Awaitable[dict | None]]
+
+log = logging.getLogger("satu_ai.mulut")
 
 _NAMA_BUNYI = {"a": "a", "i": "i", "u": "u", "o": "o", "M": "m/b/p"}
 _KATA_LATIHAN = set(BANK_KATA) | set(SUKU_KATA)
@@ -122,6 +125,8 @@ async def alasan_tugas(
         if lolos:
             alasan = [_isi_nama(b["alasan"].strip(), nama) for b in butir]
             sumber = "llm"
+        else:
+            log.warning("Alasan tugas dari LLM ditolak pagar, pakai templat: %r", str(jawab)[:300])
 
     return {
         "tugas": [{**u, "alasan": a} for u, a in zip(usulan, alasan)],
@@ -190,6 +195,8 @@ async def ringkasan_kelas(anak: list[dict], pemanggil: PemanggilLLM | None = Non
             penanda_asing = set(re.findall(r"ANAK_\d+", calon)) - {a["penanda"] for a in kelas}
             if periksa_teks(tanpa_penanda, 60) is None and not penanda_asing:
                 teks, sumber = calon.strip(), "llm"
+            else:
+                log.warning("Ringkasan kelas dari LLM ditolak pagar, pakai templat: %r", calon[:300])
     return {"ringkasan": isi_nama(teks), "sumber": sumber}
 
 
@@ -257,4 +264,6 @@ async def laporan_mingguan(data: dict, nama: str, pemanggil: PemanggilLLM | None
     if jawab and all(periksa_teks(jawab.get(k), 30) is None for k in _BAGIAN_LAPORAN):
         bagian = {k: jawab[k].strip() for k in _BAGIAN_LAPORAN}
         sumber = "llm"
+    elif jawab:
+        log.warning("Laporan mingguan dari LLM ditolak pagar, pakai templat: %r", str(jawab)[:300])
     return {**{k: _isi_nama(v, nama) for k, v in bagian.items()}, "hari_latihan": hari, "sumber": sumber}
