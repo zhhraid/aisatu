@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mata - halaman uji</title>
+    <style>
+      :root {
+        --latar: #f6f7f9; --kartu: #fff; --teks: #1b1f24; --redup: #5c6672; --garis: #d8dde3;
+        --utama: #1f6feb; --baik: #1a7f37; --buruk: #cf222e; --peringatan: #9a6700;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --latar: #0f1317; --kartu: #181d23; --teks: #e6eaef; --redup: #9aa5b1; --garis: #2c343d;
+          --utama: #58a6ff; --baik: #3fb950; --buruk: #f85149; --peringatan: #d29922;
+        }
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 15px/1.5 system-ui, sans-serif; background: var(--latar); color: var(--teks); }
+      main { max-width: 1040px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+      header { grid-column: 1 / -1; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      h2 { font-size: 15px; margin: 0 0 10px; }
+      p { margin: 0 0 8px; color: var(--redup); }
+      section { background: var(--kartu); border: 1px solid var(--garis); border-radius: 10px; padding: 14px; min-width: 0; }
+      video { width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: 8px; transform: scaleX(-1); object-fit: cover; }
+      button { font: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--garis); background: var(--kartu); color: var(--teks); cursor: pointer; }
+      button.utama { background: var(--utama); border-color: var(--utama); color: #fff; }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      input[type="text"], textarea { font: inherit; width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--garis); background: var(--latar); color: var(--teks); }
+      textarea { font: 12px/1.4 ui-monospace, monospace; height: 150px; resize: vertical; }
+      .baris { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+      .keping { display: inline-block; min-width: 34px; text-align: center; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--garis); color: var(--redup); font-weight: 600; }
+      .keping.nyala { background: var(--baik); border-color: var(--baik); color: #fff; }
+      .ukur { display: grid; grid-template-columns: 62px 1fr 48px; gap: 8px; align-items: center; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+      .rel { height: 10px; background: var(--latar); border: 1px solid var(--garis); border-radius: 999px; overflow: hidden; }
+      .isi { height: 100%; width: 0; background: var(--utama); }
+      #progres .isi { background: var(--baik); }
+      .besar { font-size: 18px; font-weight: 600; margin: 6px 0; min-height: 28px; }
+      .baik { color: var(--baik); } .buruk { color: var(--buruk); } .peringatan { color: var(--peringatan); }
+      table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+      th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--garis); }
+      code { font: 12px ui-monospace, monospace; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Mata: halaman uji dan penyetelan</h1>
+        <p>Video dan suara diproses di perangkat ini dan tidak dikirim ke mana pun. Halaman ini untuk menyetel ambang dan menguji alur, bukan tampilan untuk anak.</p>
+      </header>
+
+      <section>
+        <h2>1. Kamera</h2>
+        <video id="video" playsinline muted></video>
+        <div class="baris" style="margin-top: 10px">
+          <button id="tombolKamera" class="utama">Mulai kamera</button>
+          <button id="tombolKalibrasi" disabled>Kalibrasi (2 detik, diam)</button>
+        </div>
+        <div id="statusKamera">Belum mulai.</div>
+        <div id="statusKalibrasi" class="peringatan"></div>
+      </section>
+
+      <section>
+        <h2>2. Angka saat ini</h2>
+        <div class="baris" id="keping"></div>
+        <div id="ukuran"></div>
+        <div id="statusSuara"></div>
+      </section>
+
+      <section>
+        <h2>3. Percobaan</h2>
+        <div class="baris">
+          <input id="target" type="text" value="a" aria-label="Bunyi atau kata" style="flex: 1; min-width: 120px" />
+          <button id="tombolCoba" class="utama" disabled>Mulai</button>
+        </div>
+        <label class="baris"><input id="tanpaSuara" type="checkbox" /> Abaikan suara (uji bentuk bibir saja)</label>
+        <div>Urutan bentuk: <code id="urutan"></code></div>
+        <div class="rel" id="progres" style="margin: 10px 0"><div class="isi"></div></div>
+        <div class="besar" id="petunjuk"></div>
+        <div id="hasil"></div>
+      </section>
+
+      <section>
+        <h2>4. Uji singkat</h2>
+        <p>Tiap percobaan di atas tercatat di sini. Untuk slide: 5 orang, 5 bentuk, 5 kali.</p>
+        <table>
+          <thead><tr><th>Target</th><th>Berhasil</th><th>Jumlah</th></tr></thead>
+          <tbody id="tabelUji"></tbody>
+        </table>
+        <div class="baris" style="margin-top: 10px">
+          <button id="salinUji">Salin hasil</button>
+          <button id="resetUji">Kosongkan</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>5. Ambang aturan</h2>
+        <p>Ubah angkanya, tekan Terapkan, lalu coba lagi. Salin hasil akhirnya ke <code>src/aturan.ts</code>.</p>
+        <textarea id="ambang" spellcheck="false"></textarea>
+        <div class="baris" style="margin-top: 8px">
+          <button id="terapkanAmbang">Terapkan</button>
+          <button id="salinAmbang">Salin</button>
+          <span id="statusAmbang"></span>
+        </div>
+      </section>
+
+      <section>
+        <h2>6. Sambung ke Otak (opsional)</h2>
+        <p>Jalankan backend dulu. Latihan berikutnya diambil dari Otak dan hasil percobaan dikirim balik.</p>
+        <div class="baris">
+          <input id="alamat" type="text" value="http://localhost:8000" aria-label="Alamat backend" />
+          <input id="anak" type="text" value="anak-uji" aria-label="ID anak" />
+        </div>
+        <div class="baris">
+          <button id="tombolSesi">Mulai sesi</button>
+          <span id="statusOtak"></span>
+        </div>
+        <div id="pilihanOtak"></div>
+      </section>
+    </main>
+    <script type="module" src="/src/demo.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+# Dependensi dan hasil build
+node_modules/
+.venv/
+dist/
+__pycache__/
+.pytest_cache/
+
+# Rahasia
+.env
+
+# Diunduh oleh "npm run siapkan"
+mata/public/wasm/
+mata/public/model/
