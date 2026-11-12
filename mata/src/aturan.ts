@@ -9,7 +9,7 @@ export interface Ambang {
   i: { lebarMin: number; rahangMaks: number; bulatMaks: number };
   u: { bulatMin: number; rahangMaks: number };
   o: { bulatMin: number; rahangMin: number; rahangMaks: number };
-  M: { celahMaks: number; rahangMaks: number; tekanMin: number };
+  M: { celahMaks: number; rahangMaks: number; tekanMin: number; bulatMaks: number };
 }
 
 export const AMBANG_BAWAAN: Ambang = {
@@ -18,7 +18,8 @@ export const AMBANG_BAWAAN: Ambang = {
   u: { bulatMin: 0.4, rahangMaks: 0.2 },
   o: { bulatMin: 0.3, rahangMin: 0.2, rahangMaks: 0.5 },
   // tekanMin 0: bibir rapat sudah cukup. Naikkan kalau bibir diam terlalu mudah lolos.
-  M: { celahMaks: 0.02, rahangMaks: 0.15, tekanMin: 0 },
+  // bulatMaks: bibir yang mengerucut rapat (bentuk "u") tidak dihitung mengatup.
+  M: { celahMaks: 0.02, rahangMaks: 0.15, tekanMin: 0, bulatMaks: 0.3 },
 };
 
 export type Petunjuk =
@@ -51,8 +52,18 @@ export interface Penilaian {
 const COCOK: Penilaian = { cocok: true, petunjuk: null };
 const kurang = (petunjuk: Petunjuk): Penilaian => ({ cocok: false, petunjuk });
 
-/** Menilai apakah bentuk bibir saat ini cocok dengan bunyi yang diminta. */
-export function nilaiBentuk(bunyi: Bunyi, f: Fitur, ambang: Ambang = AMBANG_BAWAAN): Penilaian {
+/**
+ * Menilai apakah bentuk bibir saat ini cocok dengan bunyi yang diminta.
+ *
+ * `dalamKata`: bibir mengatup di dalam suku kata atau kata boleh sambil membulat,
+ * karena pada "bu" atau "mo" bibir memang sudah bersiap untuk vokal berikutnya.
+ */
+export function nilaiBentuk(
+  bunyi: Bunyi,
+  f: Fitur,
+  ambang: Ambang = AMBANG_BAWAAN,
+  dalamKata = false,
+): Penilaian {
   switch (bunyi) {
     case 'a': {
       const t = ambang.a;
@@ -85,6 +96,7 @@ export function nilaiBentuk(bunyi: Bunyi, f: Fitur, ambang: Ambang = AMBANG_BAWA
       if (f.celah > t.celahMaks || f.rahang > t.rahangMaks || f.tekan < t.tekanMin) {
         return kurang('rapatkan');
       }
+      if (!dalamKata && f.bulat >= t.bulatMaks) return kurang('jangan_bulatkan');
       return COCOK;
     }
   }

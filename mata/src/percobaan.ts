@@ -124,7 +124,7 @@ export class Percobaan {
     this.aktifMs += dt;
 
     const target = this.urutan[this.langkah] as Bunyi;
-    const bentuk = nilaiBentuk(target, frame.fitur, this.ambang);
+    const bentuk = nilaiBentuk(target, frame.fitur, this.ambang, !this.tunggal);
     const suara = frame.suara || this.opsi.tanpaSuara;
     // Di dalam kata, bibir mengatup tidak perlu bersuara (b dan p memang senyap sesaat).
     const perluSuara = this.tunggal || target !== 'M';

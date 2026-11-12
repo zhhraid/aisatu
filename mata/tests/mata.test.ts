@@ -45,6 +45,15 @@ describe('aturan bentuk bibir', () => {
     expect(nilaiBentuk('M', DIAM, ketat).cocok).toBe(false);
   });
 
+  it('bibir yang mengerucut rapat adalah "u", bukan mengatup', () => {
+    // Saat mengucap "u" celah bibir bisa sekecil bibir yang rapat.
+    const uRapat: Fitur = { rahang: 0.05, bulat: 0.6, lebar: 0, tekan: 0.1, celah: 0.01 };
+    expect(nilaiBentuk('u', uRapat).cocok).toBe(true);
+    expect(nilaiBentuk('M', uRapat)).toEqual({ cocok: false, petunjuk: 'jangan_bulatkan' });
+    // Di dalam kata ("bu", "mo") bibir boleh mengatup sambil membulat.
+    expect(nilaiBentuk('M', uRapat, AMBANG_BAWAAN, true).cocok).toBe(true);
+  });
+
   it('urutan bentuk dari kata sama dengan aturan backend', () => {
     expect(urutanDariTeks('bola')).toEqual(['M', 'o', 'a']);
     expect(urutanDariTeks('mama')).toEqual(['M', 'a', 'M', 'a']);
@@ -231,6 +240,14 @@ describe('percobaan', () => {
     // Anak mengucapkan "ba" lalu berhenti: M dan o diminta, tapi yang muncul M lalu a.
     const { hasil } = jalankan(urutanDariTeks('bola'), [[BENTUK.M, false, 4], [BENTUK.a, true, 200]]);
     expect(hasil).toMatchObject({ berhasil: false, langkah_tercapai: 1 });
+  });
+
+  it('pada "bu" bibir boleh mengatup sambil sudah membulat', () => {
+    const katupBulat: Fitur = { rahang: 0.03, bulat: 0.5, lebar: 0, tekan: 0.1, celah: 0.005 };
+    const { hasil } = jalankan(urutanDariTeks('bu'), [[katupBulat, false, 4], [BENTUK.u, true, 6]]);
+    expect(hasil).toMatchObject({ berhasil: true, langkah_tercapai: 2 });
+    // Sebagai bunyi tunggal "m", bentuk yang sama tidak lolos.
+    expect(jalankan(['M'], [[katupBulat, true, 30]]).hasil).toBeNull();
   });
 
   it('vokal di dalam kata tetap perlu suara', () => {

@@ -35,11 +35,12 @@ Dua hal yang perlu kalian periksa sendiri:
 | i | lebar ≥ 0,30 dan rahang < 0,20 dan bulat < 0,15 | "Tarik bibir ke samping" |
 | u | bulat ≥ 0,40 dan rahang < 0,20 | "Kerucutkan bibir" |
 | o | bulat ≥ 0,30 dan rahang antara 0,20 dan 0,50 | "Bulatkan bibir, buka sedikit" |
-| mengatup | celah mendekati nol dan tekan ≥ 0,20 | "Rapatkan bibir" |
+| mengatup | celah mendekati nol, rahang hampir tertutup, dan bulat < 0,30 | "Rapatkan bibir" |
 
 Catatan:
 
 - Bentuk mengatup paling sulit dibedakan dari netral, karena saat diam bibir juga tertutup. Untuk suku kata dan kata, nilai mengatup sebagai **tertutup lalu terbuka** (celah nol selama beberapa frame, lalu naik), bukan sebagai pose yang ditahan.
+- Saat mengucap "u", celah bibir bisa sekecil bibir yang rapat, jadi mengatup juga mensyaratkan bibir tidak mengerucut. Syarat ini tidak berlaku di dalam suku kata atau kata, karena pada "bu" atau "mo" bibir memang mengatup sambil membulat.
 - o dan u dibedakan terutama oleh rahang. Kalau sering tertukar, lebarkan jarak ambang rahangnya.
 - é dan ê tidak masuk. Tambahkan hanya kalau lima bentuk ini sudah stabil.
 
