@@ -220,7 +220,12 @@ def test_tugas_laporan_dan_ringkasan_tanpa_llm_memakai_templat(klien):
 def test_kurikulum_dan_status(klien):
     kurikulum = klien.get("/ai/kurikulum").json()
     assert kurikulum["bunyi"] == ["a", "i", "u", "o", "M"] and len(kurikulum["item"]) == 46
-    assert klien.get("/ai/status").json() == {"llm_tersedia": False, "mode_demo": True}
+    assert klien.get("/ai/status").json() == {
+        "llm_tersedia": False,
+        "llm_kurang": ["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"],
+        "berkas_env": "tidak dimuat",
+        "mode_demo": True,
+    }
 
 
 def test_endpoint_demo_tidak_ada_di_luar_mode_demo(monkeypatch):
@@ -359,3 +364,62 @@ def test_keluaran_terpotong_jatuh_ke_templat(monkeypatch):
     pasang_llm_tiruan(monkeypatch, penangan)
     hasil = asyncio.run(mulut.ringkasan_kelas([{"nama": "Raka", "macet": ["u"], "naik": []}]))
     assert hasil["sumber"] == "templat"
+
+
+# ------------------------------------------------------------- berkas .env
+
+
+def test_urai_env_melewati_komentar_dan_membuang_kutip():
+    from satu_ai.pengaturan import urai
+
+    teks = "# komentar\n\nLLM_MODEL = gemini-x \nLLM_API_KEY='abc=123'\nexport SATU_DEMO=1\nbaris tanpa sama dengan\nKOSONG=\n"
+    assert urai(teks) == {"LLM_MODEL": "gemini-x", "LLM_API_KEY": "abc=123", "SATU_DEMO": "1", "KOSONG": ""}
+
+
+@pytest.mark.parametrize("pengodean", ["utf-8", "utf-8-sig", "utf-16"])
+def test_env_terbaca_apa_pun_cara_notepad_menyimpannya(tmp_path, monkeypatch, pengodean):
+    from satu_ai import pengaturan
+
+    for nama in ("LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL", "SATU_DEMO"):
+        monkeypatch.delenv(nama, raising=False)
+    isi = "LLM_BASE_URL=https://contoh/v1\r\nLLM_API_KEY=abc\r\nLLM_MODEL=model-x\r\nSATU_DEMO=1\r\n"
+    (tmp_path / ".env").write_text(isi, encoding=pengodean, newline="")
+    monkeypatch.setitem(pengaturan.STATUS, "berkas_env", "tidak dimuat")
+    assert pengaturan.muat_env(tmp_path) == "terbaca, 4 baris pengaturan"
+    assert llm.tersedia() and llm.kurang() == []
+    import os
+
+    assert os.environ["SATU_DEMO"] == "1"
+    for nama in ("LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL", "SATU_DEMO"):
+        monkeypatch.delenv(nama, raising=False)  # jangan bocor ke tes lain
+
+
+def test_env_tidak_menimpa_variabel_yang_sudah_ada_dan_melaporkan_berkas_hilang(tmp_path, monkeypatch):
+    from satu_ai import pengaturan
+
+    monkeypatch.setitem(pengaturan.STATUS, "berkas_env", "tidak dimuat")
+    assert "salin .env.example jadi .env" in pengaturan.muat_env(tmp_path)
+    (tmp_path / ".env.txt").write_text("LLM_MODEL=x\n")
+    assert pengaturan.muat_env(tmp_path) == "tidak ada, tapi ada .env.txt: ganti namanya jadi .env"
+
+    # Berkas dibuat di folder utama repo, bukan di backend.
+    backend = tmp_path / "backend"
+    backend.mkdir()
+    (tmp_path / ".env").write_text("LLM_MODEL=dari-berkas\n")
+    assert pengaturan.muat_env(backend).startswith("salah tempat: ada di ")
+
+    monkeypatch.setenv("LLM_MODEL", "dari-lingkungan")
+    pengaturan.muat_env(tmp_path)
+    import os
+
+    assert os.environ["LLM_MODEL"] == "dari-lingkungan"
+
+
+def test_kunci_yang_masih_teks_contoh_dianggap_belum_diisi(monkeypatch):
+    monkeypatch.setenv("LLM_BASE_URL", "https://contoh/v1")
+    monkeypatch.setenv("LLM_MODEL", "model-x")
+    monkeypatch.setenv("LLM_API_KEY", "tempel-kunci-kamu-di-sini")
+    assert not llm.tersedia()
+    assert llm.kurang() == ["LLM_API_KEY (masih teks contoh, ganti dengan kunci asli)"]
+    monkeypatch.delenv("LLM_API_KEY")
+    assert llm.kurang() == ["LLM_API_KEY"]

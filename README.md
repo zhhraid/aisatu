@@ -14,7 +14,7 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 
 Sudah diuji:
 
-- Backend: 72 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
+- Backend: 78 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
 - Mata: 25 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
@@ -32,10 +32,28 @@ cd backend
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cp .env.example .env
-.venv/bin/uvicorn main:app --reload --port 8000 --env-file .env
+.venv/bin/python -m uvicorn main:app --reload --port 8000
 ```
 
-Di Windows, ganti `.venv/bin/` dengan `.venv\Scripts\`. Dokumentasi endpoint otomatis ada di `http://localhost:8000/docs`.
+Di Windows (PowerShell), dari folder `backend`:
+
+```bash
+python -m venv .venv
+```
+
+```bash
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+```bash
+copy .env.example .env
+```
+
+```bash
+.\.venv\Scripts\python.exe -m uvicorn main:app --port 8000
+```
+
+Berkas `.env` harus berada di folder `backend`, bukan di folder utama repo. Backend membacanya sendiri saat dinyalakan, jadi setiap perubahan `.env` perlu menyalakan ulang backend. Buka `http://localhost:8000/ai/status` untuk melihat apakah berkasnya terbaca dan pengaturan mana yang masih kosong. Dokumentasi endpoint otomatis ada di `http://localhost:8000/docs`.
 
 Tes:
 

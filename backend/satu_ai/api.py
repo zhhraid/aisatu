@@ -15,7 +15,7 @@ from datetime import timedelta
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from . import llm, mulut, otak
+from . import llm, mulut, otak, pengaturan
 from .kurikulum import (
     BUNYI,
     ITEM,
@@ -95,7 +95,12 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
 
     @router.get("/status")
     def status_layanan() -> dict:
-        return {"llm_tersedia": llm.tersedia(), "mode_demo": mode_demo}
+        return {
+            "llm_tersedia": llm.tersedia(),
+            "llm_kurang": llm.kurang(),  # nama pengaturan yang belum diisi
+            "berkas_env": pengaturan.STATUS["berkas_env"],
+            "mode_demo": mode_demo,
+        }
 
     @router.get("/kurikulum")
     def kurikulum() -> dict:

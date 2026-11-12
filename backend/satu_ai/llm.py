@@ -28,8 +28,21 @@ log = logging.getLogger("satu_ai.llm")
 _pakai_format_json = True
 
 
+_WAJIB = ("LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL")
+# Teks contoh dari .env.example dan panduan; kalau masih ini, kuncinya belum diisi.
+_KUNCI_CONTOH = {"tempel-kunci-kamu-di-sini", "kunci-kamu", "kunci-dari-ai-studio"}
+
+
+def kurang() -> list[str]:
+    """Nama pengaturan LLM yang belum diisi. Kosong berarti siap dipakai."""
+    hasil = [nama for nama in _WAJIB if not os.getenv(nama)]
+    if os.getenv("LLM_API_KEY") in _KUNCI_CONTOH:
+        hasil.append("LLM_API_KEY (masih teks contoh, ganti dengan kunci asli)")
+    return hasil
+
+
 def tersedia() -> bool:
-    return all(os.getenv(k) for k in ("LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"))
+    return not kurang()
 
 
 def urai_json(isi: str) -> dict | None:
