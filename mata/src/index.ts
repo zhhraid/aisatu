@@ -5,3 +5,4 @@ export * from './kalibrasi';
 export * from './percobaan';
 export * from './suara';
 export * from './mata';
+export * from './tutorial';

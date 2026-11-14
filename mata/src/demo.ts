@@ -2,6 +2,7 @@
 import { AMBANG_BAWAAN, nilaiBentuk, TEKS_PETUNJUK, urutanDariTeks, type Ambang } from './aturan';
 import { Mata, type FrameMata } from './mata';
 import type { HasilPercobaan, Keadaan } from './percobaan';
+import { ABJAD, gambarBibir, koordinatBentuk } from './tutorial';
 import { SEMUA_BUNYI, type Bunyi, type Fitur } from './tipe';
 
 const el = <T extends HTMLElement>(id: string): T => {
@@ -267,3 +268,28 @@ tombol('tombolSesi').addEventListener('click', async () => {
 });
 
 tampilkanUrutan();
+
+// ------------------------------------------------------------- tutorial a-z
+
+const kanvasTutorial = el<HTMLCanvasElement>('kanvasTutorial');
+function pilihHuruf(huruf: string): void {
+  const data = ABJAD.find((h) => h.huruf === huruf);
+  if (!data) return;
+  const ctx = kanvasTutorial.getContext('2d');
+  if (ctx) gambarBibir(ctx, koordinatBentuk(data.bentuk));
+  el('hurufTutorial').textContent = data.huruf.toUpperCase();
+  el('petunjukTutorial').textContent = data.petunjuk;
+  el('dinilaiTutorial').textContent = data.dinilai
+    ? 'Dinilai kamera.'
+    : 'Hanya contoh: kamera tidak bisa menilai huruf ini.';
+  for (const tombolHuruf of el('abjad').querySelectorAll('button')) {
+    tombolHuruf.classList.toggle('pilih', tombolHuruf.textContent === data.huruf);
+  }
+}
+for (const h of ABJAD) {
+  const b = document.createElement('button');
+  b.textContent = h.huruf;
+  b.addEventListener('click', () => pilihHuruf(h.huruf));
+  el('abjad').append(b);
+}
+pilihHuruf('a');

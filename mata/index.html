@@ -31,6 +31,8 @@
       textarea { font: 12px/1.4 ui-monospace, monospace; height: 150px; resize: vertical; }
       .baris { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
       .keping { display: inline-block; min-width: 34px; text-align: center; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--garis); color: var(--redup); font-weight: 600; }
+      #abjad button { min-width: 34px; padding: 4px 8px; }
+      #abjad button.pilih { background: var(--utama); border-color: var(--utama); color: #fff; }
       .keping.nyala { background: var(--baik); border-color: var(--baik); color: #fff; }
       .ukur { display: grid; grid-template-columns: 62px 1fr 48px; gap: 8px; align-items: center; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
       .rel { height: 10px; background: var(--latar); border: 1px solid var(--garis); border-radius: 999px; overflow: hidden; }
@@ -104,6 +106,16 @@
           <button id="salinAmbang">Salin</button>
           <span id="statusAmbang"></span>
         </div>
+      </section>
+
+      <section>
+        <h2>7. Tutorial bibir a-z</h2>
+        <p>Bentuk bibir contoh, digambar dari titik bibir yang sama dengan MediaPipe. Bukan rekaman wajah.</p>
+        <div class="baris" id="abjad"></div>
+        <canvas id="kanvasTutorial" width="320" height="200" style="width: 100%; max-width: 320px; background: var(--latar); border-radius: 8px"></canvas>
+        <div class="besar" id="hurufTutorial"></div>
+        <div id="petunjukTutorial"></div>
+        <div id="dinilaiTutorial"></div>
       </section>
 
       <section>

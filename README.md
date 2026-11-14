@@ -15,7 +15,7 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 Sudah diuji:
 
 - Backend: 80 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
-- Mata: 32 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
+- Mata: 36 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
 Belum diuji, dan harus kalian lakukan:
@@ -192,6 +192,7 @@ npm run cek-tipe
 3. Ubah angka di kotak **Ambang aturan**, tekan **Terapkan**, coba lagi. Salin hasil akhirnya ke `src/aturan.ts`.
 4. **Uji singkat** mencatat berhasil dan jumlah per target, untuk angka di slide.
 5. **Sambung ke Otak** menjalankan alur penuh dengan backend.
+6. **Tutorial bibir a-z** menggambar bentuk bibir contoh untuk tiap huruf.
 
 ### Memakai Mata di aplikasi web
 
@@ -221,6 +222,30 @@ if (akhir) await kirim({ item_id: item.id, ...akhir });
 **Otak.** Satu angka penguasaan per bunyi × tingkat (5 × 4). Penguasaan sebuah kata = bunyi terlemahnya. Latihan berikutnya adalah yang perkiraan berhasilnya paling dekat ke 78%, dengan pengaman dari 10 percobaan terakhir. Parameter BKT bukan hasil fit data: dipilih lewat simulasi supaya anak yang berhasil 50% percobaan jarang dicap "sudah bisa" (sekitar 15% waktu) dan anak yang berhasil 80% hampir selalu (sekitar 97%).
 
 **Mulut.** LLM tidak memilih latihan dan tidak menulis angka. Keluarannya ditolak kalau JSON rusak, memuat angka, terlalu panjang, mengubah daftar kata, atau menyebut kata latihan lain; lalu dipakai templat.
+
+### Tutorial bibir a-z
+
+`mata/src/tutorial.ts` berisi bentuk bibir contoh untuk huruf a sampai z, sebagai koordinat 40 titik bibir dengan indeks yang sama dengan MediaPipe (`FACE_LANDMARKS_LIPS`). Bentuknya dibangkitkan dari beberapa parameter (lebar, bukaan, kebulatan), bukan direkam dari wajah, dan arahnya disamakan dengan aturan penilai.
+
+Huruf dikelompokkan menurut bentuk bibir, karena banyak huruf terlihat sama dari luar:
+
+| Bentuk | Huruf | Dinilai kamera |
+| --- | --- | --- |
+| a, i, u, o | a, i, u, o | Ya |
+| Mengatup | m, b, p | Ya |
+| e | e | Tidak (hanya contoh) |
+| Gigi ke bibir bawah | f, v | Tidak |
+| Seperti u / seperti i | w / y | Tidak |
+| Dibentuk lidah | c, d, g, h, j, k, l, n, q, r, s, t, x, z | Tidak |
+
+```ts
+import { hurufTutorial, koordinatHuruf, gambarBibir } from './tutorial';
+
+hurufTutorial('b');   // { huruf: 'b', bentuk: 'katup', dinilai: 'M', petunjuk: 'Rapatkan kedua bibir, lalu buka.' }
+gambarBibir(kanvas.getContext('2d'), koordinatHuruf('b'));
+```
+
+`semuaKoordinat()` mengembalikan semua 26 huruf beserta titiknya, kalau perlu disimpan sebagai JSON.
 
 ### Angka simulasi untuk dijawab jujur
 

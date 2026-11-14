@@ -325,3 +325,66 @@ describe('kemiripan dan bintang', () => {
     expect(p.proses({ t: 100, fitur: null, suara: true }).kemiripan).toBe(0);
   });
 });
+
+import {
+  ABJAD, DALAM_ATAS, DALAM_BAWAH, INDEKS_BIBIR, hurufTutorial, koordinatBentuk, koordinatHuruf, semuaKoordinat,
+} from '../src/tutorial';
+import { FaceLandmarker } from '@mediapipe/tasks-vision';
+
+describe('tutorial bibir a-z', () => {
+  const bukaan = (h: string) => {
+    const t = koordinatHuruf(h);
+    return t[14]!.y - t[13]!.y;
+  };
+  const lebar = (h: string) => {
+    const t = koordinatHuruf(h);
+    return t[291]!.x - t[61]!.x;
+  };
+
+  it('ada 26 huruf dan memakai 40 titik bibir yang sama dengan MediaPipe', () => {
+    expect(ABJAD.map((h) => h.huruf).join('')).toBe('abcdefghijklmnopqrstuvwxyz');
+    const mp = new Set(FaceLandmarker.FACE_LANDMARKS_LIPS.flatMap((c) => [c.start, c.end]));
+    expect(new Set(INDEKS_BIBIR)).toEqual(mp);
+    for (const h of ABJAD) {
+      const t = koordinatBentuk(h.bentuk);
+      expect(Object.keys(t).map(Number).sort()).toEqual([...mp].sort());
+      for (const p of Object.values(t)) {
+        expect(p.x).toBeGreaterThan(0);
+        expect(p.x).toBeLessThan(1);
+        expect(p.y).toBeGreaterThan(0);
+        expect(p.y).toBeLessThan(1);
+      }
+    }
+    expect(Object.keys(semuaKoordinat())).toHaveLength(26);
+  });
+
+  it('bentuknya searah dengan aturan penilai', () => {
+    expect(bukaan('a')).toBeGreaterThan(bukaan('o'));
+    expect(bukaan('o')).toBeGreaterThan(bukaan('u'));
+    expect(bukaan('m')).toBeCloseTo(0);
+    expect(bukaan('b')).toBeCloseTo(0);
+    expect(lebar('i')).toBeGreaterThan(lebar('a'));
+    expect(lebar('a')).toBeGreaterThan(lebar('o'));
+    expect(lebar('o')).toBeGreaterThan(lebar('u'));
+  });
+
+  it('bibir dalam bawah tidak pernah di atas bibir dalam atas', () => {
+    for (const h of ABJAD) {
+      const t = koordinatBentuk(h.bentuk);
+      DALAM_ATAS.forEach((atas, i) => {
+        expect(t[DALAM_BAWAH[i]!]!.y).toBeGreaterThanOrEqual(t[atas]!.y - 1e-9);
+      });
+    }
+  });
+
+  it('hanya huruf yang punya aturan yang ditandai dinilai, dan cocok dengan urutan bentuk', () => {
+    const dinilai = ABJAD.filter((h) => h.dinilai).map((h) => h.huruf).join('');
+    expect(dinilai).toBe('abimopu');
+    for (const h of 'abimopu') {
+      expect(urutanDariTeks(h)).toEqual([hurufTutorial(h).dinilai]);
+    }
+    expect(hurufTutorial('r')).toMatchObject({ bentuk: 'lidah', dinilai: null });
+    expect(hurufTutorial('F')).toMatchObject({ huruf: 'f', bentuk: 'gigi_bibir' });
+    expect(hurufTutorial('w').bentuk).toBe('u');
+  });
+});
