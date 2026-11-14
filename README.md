@@ -15,12 +15,12 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 Sudah diuji:
 
 - Backend: 109 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
-- Mata: 36 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
+- Mata: 42 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
 Belum diuji, dan harus kalian lakukan:
 
-- **Ambang aturan bibir belum disetel dengan wajah yang bergerak.** Angka di `mata/src/aturan.ts` masih tebakan. Uji di atas hanya memakai foto diam bermulut tertutup, jadi hanya bentuk "mengatup" yang terbukti lolos dan "a" yang terbukti gagal saat mulut tertutup.
+- **Ambang aturan bibir belum diuji dengan wajah yang bergerak.** Angka bawaan di `mata/src/aturan.ts` ditentukan dari perilaku blendshape MediaPipe saat bicara biasa, bukan dari pengukuran, dan dijamin tidak tumpang tindih (tes `cekTumpang`). Untuk wajah tertentu, pakai **Setel otomatis** di halaman uji.
 - **Belum pernah dicoba pada anak tunarungu.**
 - **Panggilan ke Gemini sungguhan.** Klien HTTP-nya diuji dengan server tiruan dan alamat Gemini sudah dipastikan ada, tapi belum pernah dipanggil dengan kunci API asli.
 - **Kecepatan di HP.** Di lingkungan uji tanpa GPU hanya 6 sampai 9 frame per detik. Halaman uji menampilkan angka ini; cek di laptop sekolah dan HP Android murah.
@@ -208,7 +208,7 @@ npm run cek-tipe
 
 1. **Mulai kamera**, lalu **Kalibrasi** sambil diam dengan mulut tertutup.
 2. Lihat lima angka (`rahang`, `bulat`, `lebar`, `tekan`, `celah`) sambil membuat tiap bentuk. Keping `a i u o M` menyala kalau aturannya terpenuhi.
-3. Ubah angka di kotak **Ambang aturan**, tekan **Terapkan**, coba lagi. Salin hasil akhirnya ke `src/aturan.ts`.
+3. Tekan **Setel otomatis** dan buat lima bentuk saat diminta; ambang dihitung dari wajahmu dan langsung dipakai. Kalau ada bentuk yang terlalu mirip, halaman menyebut bentuk mana yang perlu diulang. Angka juga bisa diubah sendiri di kotak **Ambang aturan**. Salin hasil akhirnya ke `src/aturan.ts`.
 4. **Uji singkat** mencatat berhasil dan jumlah per target, untuk angka di slide.
 5. **Sambung ke Otak** menjalankan alur penuh dengan backend.
 6. **Tutorial bibir a-z** menggambar bentuk bibir contoh untuk tiap huruf.

@@ -99,7 +99,13 @@
 
       <section>
         <h2>5. Ambang aturan</h2>
-        <p>Ubah angkanya, tekan Terapkan, lalu coba lagi. Salin hasil akhirnya ke <code>src/aturan.ts</code>.</p>
+        <p><b>Setel otomatis:</b> setelah kalibrasi, buat lima bentuk saat diminta (masing-masing sekitar 2 detik, sambil bersuara). Ambang dihitung dari wajahmu sendiri.</p>
+        <div class="baris">
+          <button id="tombolSetel" class="utama" disabled>Setel otomatis</button>
+        </div>
+        <div class="besar" id="arahanSetel"></div>
+        <div id="statusSetel"></div>
+        <p style="margin-top: 10px">Atau ubah angkanya sendiri, tekan Terapkan, lalu coba lagi. Salin hasil akhirnya ke <code>src/aturan.ts</code>.</p>
         <textarea id="ambang" spellcheck="false"></textarea>
         <div class="baris" style="margin-top: 8px">
           <button id="terapkanAmbang">Terapkan</button>

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { AMBANG_BAWAAN, kemiripan, nilaiBentuk, urutanDariTeks } from '../src/aturan';
+import {
+  AMBANG_BAWAAN, cekTumpang, kemiripan, medianFitur, nilaiBentuk, setelOtomatis, urutanDariTeks,
+} from '../src/aturan';
 import { ambilBlendshape, celahBibir, hitungFitur, posisiWajah } from '../src/fitur';
 import { Kalibrasi } from '../src/kalibrasi';
 import { hitungBintang, Percobaan, type FramePercobaan } from '../src/percobaan';
@@ -29,7 +31,8 @@ describe('aturan bentuk bibir', () => {
 
   it('memberi petunjuk dari syarat pertama yang belum terpenuhi', () => {
     expect(nilaiBentuk('a', DIAM).petunjuk).toBe('buka_lebar');
-    expect(nilaiBentuk('a', BENTUK.o).petunjuk).toBe('buka_lebar');
+    // "o" sudah cukup terbuka untuk "a"; yang salah adalah bibirnya membulat.
+    expect(nilaiBentuk('a', BENTUK.o).petunjuk).toBe('jangan_bulatkan');
     expect(nilaiBentuk('a', { ...BENTUK.a, bulat: 0.5 }).petunjuk).toBe('jangan_bulatkan');
     expect(nilaiBentuk('i', DIAM).petunjuk).toBe('tarik_samping');
     expect(nilaiBentuk('i', BENTUK.a).petunjuk).toBe('tutup_sedikit');
@@ -205,7 +208,7 @@ describe('percobaan', () => {
   it('suara tanpa bentuk yang benar tidak berhasil', () => {
     const { hasil, keadaan } = jalankan(['a'], [[BENTUK.o, true, 30]]);
     expect(hasil).toBeNull();
-    expect(keadaan.petunjuk).toBe('buka_lebar');
+    expect(keadaan.petunjuk).toBe('jangan_bulatkan');
   });
 
   it('gagal setelah batas waktu, dengan langkah tempat anak macet', () => {
@@ -276,8 +279,8 @@ describe('percobaan', () => {
 describe('kemiripan dan bintang', () => {
   it('100% hanya kalau aturannya lolos, dan bentuk yang lebih dekat bernilai lebih tinggi', () => {
     expect(kemiripan('a', BENTUK.a)).toBe(1);
-    const setengahBuka: Fitur = { ...DIAM, rahang: 0.25 };
-    const hampir: Fitur = { ...DIAM, rahang: 0.4 };
+    const setengahBuka: Fitur = { ...DIAM, rahang: 0.15 };
+    const hampir: Fitur = { ...DIAM, rahang: 0.27 };
     expect(kemiripan('a', DIAM)).toBeLessThan(kemiripan('a', setengahBuka));
     expect(kemiripan('a', setengahBuka)).toBeLessThan(kemiripan('a', hampir));
     expect(kemiripan('a', hampir)).toBeLessThanOrEqual(0.95);
@@ -395,5 +398,54 @@ describe('tutorial bibir a-z', () => {
     expect(hurufTutorial('r')).toMatchObject({ bentuk: 'lidah', dinilai: null });
     expect(hurufTutorial('F')).toMatchObject({ huruf: 'f', bentuk: 'gigi_bibir' });
     expect(hurufTutorial('w').bentuk).toBe('u');
+  });
+});
+
+const SEMUA: Bunyi[] = ['a', 'i', 'u', 'o', 'M'];
+
+describe('ambang dan penyetelan otomatis', () => {
+  // Contoh bentuk satu orang setelah kalibrasi netral, dengan gerakan kecil seperti saat bicara biasa.
+  const ORANG: Record<Bunyi, Fitur> = {
+    a: { rahang: 0.35, bulat: 0.05, lebar: 0.05, tekan: 0, celah: 0.12 },
+    i: { rahang: 0.08, bulat: 0.02, lebar: 0.22, tekan: 0, celah: 0.03 },
+    u: { rahang: 0.04, bulat: 0.45, lebar: 0, tekan: 0, celah: 0.02 },
+    o: { rahang: 0.2, bulat: 0.32, lebar: 0, tekan: 0, celah: 0.07 },
+    M: { rahang: 0.01, bulat: 0.06, lebar: 0.03, tekan: 0.1, celah: 0.003 },
+  };
+
+  it('ambang bawaan tidak pernah meloloskan satu bentuk sebagai dua bunyi', () => {
+    expect(cekTumpang(AMBANG_BAWAAN)).toEqual([]);
+  });
+
+  it('ambang bawaan mengenali gerakan kecil saat bicara biasa', () => {
+    for (const b of SEMUA) expect(nilaiBentuk(b, ORANG[b]).cocok, b).toBe(true);
+  });
+
+  it('penyetelan otomatis mengenali tiap bentuk orang itu hanya sebagai bunyinya sendiri', () => {
+    // Orang yang gerakannya lebih kecil lagi: ambang bawaan gagal, ambang hasil setel berhasil.
+    const kecil = Object.fromEntries(
+      SEMUA.map((b) => [b, { ...ORANG[b], rahang: ORANG[b].rahang * 0.6, bulat: ORANG[b].bulat * 0.6, lebar: ORANG[b].lebar * 0.6 }]),
+    ) as Record<Bunyi, Fitur>;
+    expect(SEMUA.some((b) => !nilaiBentuk(b, kecil[b]).cocok)).toBe(true);
+    const hasil = setelOtomatis(kecil);
+    expect(hasil.ok).toBe(true);
+    if (!hasil.ok) return;
+    for (const b of SEMUA) {
+      const lolos = SEMUA.filter((x) => nilaiBentuk(x, kecil[b], hasil.ambang).cocok);
+      expect(lolos, b).toEqual([b]);
+    }
+    expect(cekTumpang(hasil.ambang)).toEqual([]);
+  });
+
+  it('bentuk yang terlalu mirip dilaporkan, bukan disetel diam-diam', () => {
+    const mirip = { ...ORANG, o: { ...ORANG.o, rahang: 0.06, bulat: 0.44 } };
+    const hasil = setelOtomatis(mirip);
+    expect(hasil.ok).toBe(false);
+    if (!hasil.ok) expect(hasil.masalah[0]).toContain('"o" dan "u" terlalu mirip');
+  });
+
+  it('median tahan terhadap satu frame yang meleset', () => {
+    const m = medianFitur([ORANG.a, ORANG.a, { ...ORANG.a, rahang: 0.9 }]);
+    expect(m.rahang).toBeCloseTo(0.35);
   });
 });

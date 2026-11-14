@@ -1,25 +1,39 @@
 import type { Bunyi, Fitur } from './tipe';
 
 /**
- * Ambang aturan bentuk bibir. Angka ini titik awal yang ditebak, belum disetel
- * dengan wajah sungguhan. Setel lewat halaman demo, lalu salin hasilnya ke sini.
+ * Ambang aturan bentuk bibir. Semua angka kecuali celah adalah selisih blendshape
+ * MediaPipe dari wajah netral anak (0 sampai 1).
  */
 export interface Ambang {
   a: { rahangMin: number; bulatMaks: number };
   i: { lebarMin: number; rahangMaks: number; bulatMaks: number };
   u: { bulatMin: number; rahangMaks: number };
   o: { bulatMin: number; rahangMin: number; rahangMaks: number };
-  M: { celahMaks: number; rahangMaks: number; tekanMin: number; bulatMaks: number };
+  M: { celahMaks: number; rahangMaks: number; tekanMin: number; bulatMaks: number; lebarMaks: number };
 }
 
+/**
+ * Ambang bawaan, ditentukan dari perilaku blendshape MediaPipe saat berbicara, bukan dari
+ * pengukuran. Saat bicara biasa, gerakan mulut jauh lebih kecil daripada saat berpose:
+ * jawOpen untuk "a" sekitar 0,3 sampai 0,6, mouthSmile untuk "i" sekitar 0,1 sampai 0,4,
+ * dan mouthPucker/mouthFunnel untuk "u" dan "o" sekitar 0,3 sampai 0,8. Karena itu ambang
+ * dibuat lebih longgar dari tebakan pertama.
+ *
+ * Batas antar-bentuk dibuat berbagi angka yang sama (misalnya bulatMaks "a" = bulatMin "o"),
+ * sehingga satu bentuk bibir tidak pernah lolos sebagai dua bunyi; lihat cekTumpang().
+ * Untuk wajah tertentu, setelOtomatis() menghitung ambang dari contoh bentuk orang itu.
+ */
 export const AMBANG_BAWAAN: Ambang = {
-  a: { rahangMin: 0.45, bulatMaks: 0.3 },
-  i: { lebarMin: 0.3, rahangMaks: 0.2, bulatMaks: 0.15 },
-  u: { bulatMin: 0.4, rahangMaks: 0.2 },
-  o: { bulatMin: 0.3, rahangMin: 0.2, rahangMaks: 0.5 },
-  // tekanMin 0: bibir rapat sudah cukup. Naikkan kalau bibir diam terlalu mudah lolos.
-  // bulatMaks: bibir yang mengerucut rapat (bentuk "u") tidak dihitung mengatup.
-  M: { celahMaks: 0.02, rahangMaks: 0.15, tekanMin: 0, bulatMaks: 0.3 },
+  // "a": rahang paling terbuka, bibir tidak membulat.
+  a: { rahangMin: 0.3, bulatMaks: 0.25 },
+  // "i": bibir melebar, rahang hampir tertutup, tidak membulat.
+  i: { lebarMin: 0.15, rahangMaks: 0.3, bulatMaks: 0.15 },
+  // "u": paling membulat, rahang hampir tertutup.
+  u: { bulatMin: 0.35, rahangMaks: 0.12 },
+  // "o": membulat dengan rahang terbuka sedang, di antara "u" dan "a".
+  o: { bulatMin: 0.25, rahangMin: 0.12, rahangMaks: 0.45 },
+  // Bibir rapat: celah hampir nol, tidak membulat (bukan "u"), tidak melebar (bukan "i").
+  M: { celahMaks: 0.02, rahangMaks: 0.15, tekanMin: 0, bulatMaks: 0.25, lebarMaks: 0.15 },
 };
 
 export type Petunjuk =
@@ -96,7 +110,9 @@ export function nilaiBentuk(
       if (f.celah > t.celahMaks || f.rahang > t.rahangMaks || f.tekan < t.tekanMin) {
         return kurang('rapatkan');
       }
+      // Di dalam kata ("bu", "mi") bibir boleh mengatup sambil bersiap ke vokal berikutnya.
       if (!dalamKata && f.bulat >= t.bulatMaks) return kurang('jangan_bulatkan');
+      if (!dalamKata && f.lebar >= t.lebarMaks) return kurang('rapatkan');
       return COCOK;
     }
   }
@@ -156,6 +172,7 @@ export function kemiripan(
         dekatMaks(f.rahang, ambang.M.rahangMaks),
         dekatMin(f.tekan, ambang.M.tekanMin),
         dalamKata ? 1 : dekatMaks(f.bulat, ambang.M.bulatMaks),
+        dalamKata ? 1 : dekatMaks(f.lebar, ambang.M.lebarMaks),
       ];
       break;
   }
@@ -185,4 +202,96 @@ export function urutanDariTeks(teks: string): Bunyi[] {
     if (bentuk && hasil[hasil.length - 1] !== bentuk) hasil.push(bentuk);
   }
   return hasil;
+}
+
+// ------------------------------------------------- tumpang tindih dan penyetelan
+
+const BENTUK_TUNGGAL: readonly Bunyi[] = ['a', 'i', 'u', 'o', 'M'];
+
+/**
+ * Pasangan bunyi yang bisa lolos bersamaan untuk bentuk bibir yang sama, dicari di
+ * seluruh ruang angka. Kosong berarti ambangnya aman.
+ */
+export function cekTumpang(ambang: Ambang = AMBANG_BAWAAN): [Bunyi, Bunyi][] {
+  const hasil = new Set<string>();
+  const langkah = [0, 0.02, 0.05, 0.08, 0.1, 0.12, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.8];
+  for (const rahang of langkah) {
+    for (const bulat of langkah) {
+      for (const lebar of langkah) {
+        for (const celah of [0, 0.01, 0.02, 0.05, 0.1]) {
+          const f: Fitur = { rahang, bulat, lebar, tekan: 0, celah };
+          const lolos = BENTUK_TUNGGAL.filter((b) => nilaiBentuk(b, f, ambang).cocok);
+          for (let x = 0; x < lolos.length; x++) {
+            for (let y = x + 1; y < lolos.length; y++) hasil.add(`${lolos[x]}|${lolos[y]}`);
+          }
+        }
+      }
+    }
+  }
+  return [...hasil].map((pasangan) => pasangan.split('|') as [Bunyi, Bunyi]);
+}
+
+/** Nilai tengah (median) tiap angka dari sekumpulan frame. */
+export function medianFitur(frame: readonly Fitur[]): Fitur {
+  const tengah = (kunci: keyof Fitur) => {
+    const urut = frame.map((f) => f[kunci]).sort((a, b) => a - b);
+    const m = Math.floor(urut.length / 2);
+    return urut.length % 2 ? urut[m]! : ((urut[m - 1] ?? 0) + (urut[m] ?? 0)) / 2;
+  };
+  return { rahang: tengah('rahang'), bulat: tengah('bulat'), lebar: tengah('lebar'), tekan: tengah('tekan'), celah: tengah('celah') };
+}
+
+export type HasilSetel = { ok: true; ambang: Ambang } | { ok: false; masalah: string[] };
+
+/** Selisih terkecil antar-bentuk supaya bisa dibedakan dengan andal. */
+const JARAK_MIN = 0.05;
+const JARAK_MIN_CELAH = 0.008;
+
+/**
+ * Menghitung ambang dari contoh bentuk satu orang (median tiap bentuk, setelah kalibrasi
+ * netral). Batas diletakkan di tengah antara bentuk yang harus dibedakan. Kalau ada dua
+ * bentuk yang terlalu mirip, tidak ada yang diubah dan masalahnya dilaporkan, supaya
+ * penguji bisa mengulang bentuk itu dengan lebih jelas.
+ */
+export function setelOtomatis(contoh: Record<Bunyi, Fitur>): HasilSetel {
+  const { a, i, u, o, M } = contoh;
+  const masalah: string[] = [];
+  const syarat = (benar: boolean, pesan: string) => {
+    if (!benar) masalah.push(pesan);
+  };
+  const tengah = (x: number, y: number) => (x + y) / 2;
+  const maks = Math.max;
+  const min = Math.min;
+
+  syarat(a.rahang - maks(o.rahang, i.rahang) >= JARAK_MIN, '"a" belum cukup lebih terbuka daripada "o" dan "i". Buka mulut lebih lebar saat "a".');
+  syarat(o.rahang - u.rahang >= JARAK_MIN, '"o" dan "u" terlalu mirip. Buka rahang sedikit saat "o", rapatkan saat "u".');
+  syarat(min(o.bulat, u.bulat) - maks(a.bulat, i.bulat, M.bulat) >= JARAK_MIN, '"o" dan "u" belum cukup membulat dibandingkan "a", "i", dan bibir rapat.');
+  syarat(i.lebar - maks(a.lebar, o.lebar, u.lebar, M.lebar) >= JARAK_MIN, '"i" belum cukup melebar. Tarik bibir ke samping saat "i".');
+  syarat(min(a.celah, i.celah, u.celah, o.celah) - M.celah >= JARAK_MIN_CELAH, 'Bibir rapat belum cukup berbeda dari bunyi lain. Rapatkan bibir sepenuhnya saat "m".');
+  if (masalah.length) return { ok: false, masalah };
+
+  // Batas bersama: angka yang sama dipakai dua bentuk, jadi keduanya tidak bisa lolos bersamaan.
+  const batasBulat = tengah(maks(a.bulat, i.bulat, M.bulat), min(o.bulat, u.bulat));
+  const batasRahangUo = tengah(u.rahang, o.rahang);
+  const batasRahangOa = tengah(maks(o.rahang, i.rahang), a.rahang);
+  const batasLebar = tengah(maks(a.lebar, o.lebar, u.lebar, M.lebar), i.lebar);
+
+  const ambang: Ambang = {
+    a: { rahangMin: batasRahangOa, bulatMaks: batasBulat },
+    i: { lebarMin: batasLebar, rahangMaks: batasRahangOa, bulatMaks: min(tengah(i.bulat, min(o.bulat, u.bulat)), batasBulat) },
+    u: { bulatMin: maks(tengah(maks(a.bulat, i.bulat, M.bulat), u.bulat), batasBulat), rahangMaks: batasRahangUo },
+    o: { bulatMin: batasBulat, rahangMin: batasRahangUo, rahangMaks: maks(batasRahangOa, tengah(o.rahang, a.rahang)) },
+    M: {
+      celahMaks: tengah(M.celah, min(a.celah, i.celah, u.celah, o.celah)),
+      rahangMaks: min(maks(M.rahang + 0.1, 0.1), batasRahangOa),
+      tekanMin: 0,
+      bulatMaks: batasBulat,
+      lebarMaks: batasLebar,
+    },
+  };
+  const tumpang = cekTumpang(ambang);
+  if (tumpang.length) {
+    return { ok: false, masalah: tumpang.map(([x, y]) => `"${x}" dan "${y}" masih bisa tertukar. Ulangi kedua bentuk dengan lebih jelas.`) };
+  }
+  return { ok: true, ambang };
 }

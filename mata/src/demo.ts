@@ -1,5 +1,7 @@
 // Halaman uji: menyetel ambang dengan wajah sungguhan dan mencoba alur Mata -> Otak.
-import { AMBANG_BAWAAN, nilaiBentuk, TEKS_PETUNJUK, urutanDariTeks, type Ambang } from './aturan';
+import {
+  AMBANG_BAWAAN, medianFitur, nilaiBentuk, setelOtomatis, TEKS_PETUNJUK, urutanDariTeks, type Ambang,
+} from './aturan';
 import { Mata, type FrameMata } from './mata';
 import type { HasilPercobaan, Keadaan } from './percobaan';
 import { ABJAD, gambarBibir, koordinatBentuk } from './tutorial';
@@ -122,6 +124,7 @@ tombol('tombolKamera').addEventListener('click', async () => {
     mata.padaFrame(tampilkanFrame);
     tombol('tombolKalibrasi').disabled = false;
     tombol('tombolCoba').disabled = false;
+    tombol('tombolSetel').disabled = false;
     el('statusKalibrasi').textContent = 'Belum dikalibrasi: angka di samping masih mentah.';
     t.textContent = 'Kamera aktif';
     document.body.dataset['siap'] = '1';
@@ -293,3 +296,70 @@ for (const h of ABJAD) {
   el('abjad').append(b);
 }
 pilihHuruf('a');
+
+// ---------------------------------------------------------- setel otomatis
+
+const NAMA_BENTUK: Record<Bunyi, string> = {
+  a: '"aaa", mulut terbuka lebar',
+  i: '"iii", bibir ditarik ke samping',
+  u: '"uuu", bibir mengerucut',
+  o: '"ooo", bibir bulat dan agak terbuka',
+  M: '"mmm", bibir rapat',
+};
+const tunggu = (ms: number) => new Promise((selesai) => setTimeout(selesai, ms));
+
+async function kumpulkanBentuk(lamaMs: number): Promise<Fitur[]> {
+  const frame: Fitur[] = [];
+  const lepas = mata!.padaFrame((f) => {
+    if (f.fitur) frame.push(f.fitur);
+  });
+  await tunggu(lamaMs);
+  lepas();
+  return frame;
+}
+
+tombol('tombolSetel').addEventListener('click', async () => {
+  const arahan = el('arahanSetel');
+  const status = el('statusSetel');
+  status.className = '';
+  status.textContent = '';
+  if (!mata?.terkalibrasi) {
+    status.className = 'buruk';
+    status.textContent = 'Kalibrasi dulu (tombol Kalibrasi di kartu 1).';
+    return;
+  }
+  tombol('tombolSetel').disabled = true;
+  const contoh = {} as Record<Bunyi, Fitur>;
+  try {
+    for (const bunyi of SEMUA_BUNYI) {
+      pilihHuruf(bunyi === 'M' ? 'm' : bunyi);
+      for (let hitung = 3; hitung > 0; hitung--) {
+        arahan.textContent = `Siap-siap: ${NAMA_BENTUK[bunyi]} (${hitung})`;
+        await tunggu(600);
+      }
+      arahan.textContent = `Tahan ${NAMA_BENTUK[bunyi]}...`;
+      const frame = await kumpulkanBentuk(2000);
+      if (frame.length < 5) throw new Error(`Wajah tidak terlihat saat bentuk ${bunyi}. Ulangi.`);
+      contoh[bunyi] = medianFitur(frame);
+    }
+    arahan.textContent = '';
+    const hasil = setelOtomatis(contoh);
+    if (!hasil.ok) {
+      status.className = 'buruk';
+      status.innerHTML = 'Belum bisa disetel:<br>' + hasil.masalah.map((m) => `- ${m}`).join('<br>');
+      return;
+    }
+    const bulat = JSON.parse(JSON.stringify(hasil.ambang, (_k, v) => (typeof v === 'number' ? Math.round(v * 1000) / 1000 : v)));
+    mata.ambang = bulat as Ambang;
+    kotakAmbang.value = JSON.stringify(bulat, null, 2);
+    status.className = 'baik';
+    status.textContent = 'Ambang disetel dari wajahmu dan langsung dipakai. Coba lima bentuk lagi, lalu tekan Salin untuk menyimpannya.';
+    document.body.dataset['setel'] = 'ok';
+  } catch (galat) {
+    arahan.textContent = '';
+    status.className = 'buruk';
+    status.textContent = (galat as Error).message;
+  } finally {
+    tombol('tombolSetel').disabled = false;
+  }
+});
