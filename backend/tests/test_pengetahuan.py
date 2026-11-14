@@ -248,3 +248,80 @@ def test_saran_dari_llm_tanpa_kode_di_kalimat():
         "Ajak Sinta melatih bunyi /i/ dengan cermin.",
         "Latih bunyi /u/ dengan benda konkret.",
     ]
+
+
+# ------------------------------------------------------------- agent tanya progres
+
+DATA_TANYA = {
+    "level": {"nomor": 2, "nama": "Vokal e, o"}, "level_tuntas": [1],
+    "sudah_bisa": ["a", "i"], "sedang_dilatih": ["u", "o"], "perlu_perhatian": ["u"],
+    "alasan_perhatian": {"u": "macet"}, "tren_bunyi": {"u": "tetap"},
+    "keberhasilan_minggu_ini": "cukup", "hari_latihan_minggu_ini": 3, "streak": 2,
+}
+
+
+def test_tanya_dijawab_dari_data_dengan_rujukan_dan_nama_tidak_dikirim():
+    jawab = {"jawaban": "ANAK sudah bisa a dan i, dan sudah berlatih 2 hari berturut-turut. Bunyi u perlu dilatih dengan bibir maju (R1).", "rujukan": ["R1"]}
+    palsu = llm_palsu(jawab)
+    hasil = asyncio.run(mulut.tanya_progres("Sinta lemah di mana?", DATA_TANYA, "Sinta", "orang_tua", RUJ, palsu))
+    assert hasil["sumber"] == "llm"
+    assert hasil["jawaban"].startswith("Sinta sudah bisa a dan i") and "R1" not in hasil["jawaban"]
+    assert hasil["rujukan"] == [{"judul": "Buku A", "url": "https://a", "halaman": 12}]
+    assert palsu.pesan["pertanyaan"] == "ANAK lemah di mana?"  # nama tidak dikirim ke LLM
+    assert "Sinta" not in json.dumps(palsu.pesan)
+
+
+def test_tanya_di_luar_topik_boleh_ditolak_tanpa_rujukan():
+    jawab = {"jawaban": "Maaf, saya tidak bisa menjawab soal obat. Silakan tanyakan ke guru atau terapis wicara.", "rujukan": []}
+    hasil = asyncio.run(mulut.tanya_progres("Obat apa untuk telinganya?", DATA_TANYA, "Sinta", "orang_tua", RUJ, llm_palsu(jawab)))
+    assert hasil["sumber"] == "llm" and hasil["rujukan"] == []
+
+
+@pytest.mark.parametrize("rusak", [
+    None,
+    {"jawaban": "Penguasaannya 45%.", "rujukan": ["DATA"]},
+    {"jawaban": "Kata buku menyebut begitu.", "rujukan": ["R5"]},
+    {"jawaban": "kata " * 95, "rujukan": ["DATA"]},
+])
+def test_tanya_yang_tidak_lolos_pagar_jatuh_ke_ringkasan_templat(rusak):
+    hasil = asyncio.run(mulut.tanya_progres("Bagaimana perkembangannya?", DATA_TANYA, "Sinta", "guru", RUJ, llm_palsu(rusak)))
+    assert hasil["sumber"] == "templat"
+    assert hasil["jawaban"] == (
+        "Sinta sekarang di Level 2 (Vokal e, o). Sudah bisa: bunyi a dan i. Sedang dilatih: bunyi u dan o. "
+        "Perlu perhatian: bunyi u. Sudah berlatih 2 hari berturut-turut."
+    )
+
+
+def test_tren_minggu_ini_dibanding_sebelumnya():
+    s = otak.StatusAnak()
+    lama = T0 - timedelta(days=10)
+    otak.catat_percobaan(s, ITEM_PER_ID["t1-u"], False, 0, lama)
+    for _ in range(3):
+        otak.catat_percobaan(s, ITEM_PER_ID["t1-u"], True, 1, T0)
+    otak.catat_percobaan(s, ITEM_PER_ID["t1-a"], True, 1, T0)
+    t = otak.tren(s, T0)
+    assert t["arah_bunyi"] == {"u": "naik", "a": "baru dilatih"}
+    assert (t["berhasil_minggu_ini"], t["berhasil_sebelumnya"]) == (1.0, 0.0)
+
+
+def test_endpoint_level_riwayat_dan_tanya(monkeypatch):
+    for kunci in ("LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"):
+        monkeypatch.delenv(kunci, raising=False)
+    app = FastAPI()
+    app.include_router(buat_router(demo=True))
+    k = TestClient(app)
+    k.post("/ai/demo/isi", json={"anak_id": "sinta", "profil": "menengah"})
+
+    level = k.get("/ai/anak/sinta/level").json()
+    assert level["level_sekarang"] == 1 and len(level["level"]) == 6
+    assert level == k.get("/ai/anak/sinta/peta").json()["level"]
+
+    riwayat = k.get("/ai/anak/sinta/riwayat").json()
+    garis = riwayat["per_bunyi"]["a"]
+    assert len(garis) >= 3 and garis[-1]["kemajuan"] > garis[0]["kemajuan"]  # data demo naik
+
+    jawab = k.post("/ai/anak/sinta/tanya", json={"nama": "Sinta", "pertanyaan": "Sinta lemah di mana?", "pembaca": "guru"}).json()
+    assert jawab["sumber"] == "templat" and jawab["jawaban"].startswith("Sinta sekarang di Level 1")
+    assert "u" in jawab["data"]["perlu_perhatian"]
+    tolak = k.post("/ai/anak/sinta/tanya", json={"nama": "Sinta", "pertanyaan": "x", "pembaca": "guru"})
+    assert tolak.status_code == 422  # pertanyaan terlalu pendek

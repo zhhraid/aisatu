@@ -152,7 +152,7 @@ def test_alur_sesi_sampai_naik_tingkat(klien):
     berikut = klien.post("/ai/anak/raka/sesi").json()["berikutnya"]
     assert berikut["item"] == {
         "id": "t1-a", "tingkat": 1, "teks": "a", "urutan": ["a"], "bantuan_visual": True,
-        "dinilai_sebagian": False,
+        "dinilai_sebagian": False, "level": 1,
     }
     urutan_id = []
     for _ in range(6):

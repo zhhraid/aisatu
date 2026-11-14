@@ -82,6 +82,10 @@ class Item:
     urutan: tuple[str, ...]
 
     @property
+    def level(self) -> int:
+        return level_item(self)
+
+    @property
     def bunyi(self) -> tuple[str, ...]:
         """Bunyi yang berbeda di item ini, urut kemunculan."""
         return tuple(dict.fromkeys(self.urutan))
@@ -93,9 +97,39 @@ class Item:
             "teks": self.teks,
             "urutan": list(self.urutan),
             "bantuan_visual": self.tingkat == 1,
+            "level": self.level,
             # True kalau ada bunyi lidah yang hanya dinilai sebagian (mulut dan suara).
             "dinilai_sebagian": any(b in DINILAI_SEBAGIAN for b in self.urutan),
         }
+
+
+# Peta petualangan: enam level. Level 1-4 berisi bunyi tunggal (tingkat 1 dan 2),
+# level 5 suku kata (tingkat 3), level 6 kata (tingkat 4).
+@dataclass(frozen=True)
+class Level:
+    nomor: int
+    nama: str
+    bunyi: tuple[str, ...]
+    tingkat: tuple[int, ...]
+
+
+LEVEL: tuple[Level, ...] = (
+    Level(1, "Vokal a, i, u", ("a", "i", "u"), (1, 2)),
+    Level(2, "Vokal e, o", ("e", "o"), (1, 2)),
+    Level(3, "Konsonan bibir: m/b/p dan f/v", ("M", "F"), (1, 2)),
+    Level(4, "Hembusan h, desis, dan huruf lidah", ("H", "S", "T"), (1, 2)),
+    Level(5, "Suku kata", BUNYI, (3,)),
+    Level(6, "Kata", BUNYI, (4,)),
+)
+_LEVEL_BUNYI = {b: lv.nomor for lv in LEVEL[:4] for b in lv.bunyi}
+
+
+def level_item(item: "Item") -> int:
+    if item.tingkat == 3:
+        return 5
+    if item.tingkat == 4:
+        return 6
+    return _LEVEL_BUNYI[item.urutan[0]]
 
 
 SUKU_KATA = (

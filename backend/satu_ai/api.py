@@ -13,6 +13,8 @@ import random
 from datetime import timedelta
 
 from fastapi import APIRouter, HTTPException
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from . import llm, mulut, otak, pengaturan, pengetahuan
@@ -43,6 +45,12 @@ class MasukanNama(BaseModel):
 class AnakKelas(BaseModel):
     anak_id: str
     nama: str = Field(min_length=1, max_length=40)
+
+
+class MasukanTanya(BaseModel):
+    nama: str = Field(min_length=1, max_length=40)
+    pertanyaan: str = Field(min_length=3, max_length=300)
+    pembaca: Literal["guru", "orang_tua"] = "orang_tua"
 
 
 class MasukanKelas(BaseModel):
@@ -151,6 +159,7 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
             "tingkat_berhasil": otak.tingkat_berhasil(status),
             "hari_latihan_minggu_ini": otak.hari_latihan_minggu_ini(status, sekarang),
             "streak": otak.streak(status, sekarang),
+            "level": otak.status_level(status, sekarang),
             "sintetis": status.sintetis,
         }
 
@@ -184,6 +193,49 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
         dilatih = [d["bunyi"] for d in data["sedang_dilatih"]]
         rujukan = pengetahuan.muat().cari(dilatih, "orang_tua", k=3)
         return await mulut.laporan_mingguan(data, masukan.nama, rujukan=rujukan)
+
+    @router.get("/anak/{anak_id}/level")
+    def level(anak_id: str) -> dict:
+        """Peta petualangan: enam level dengan kemajuan, bintang, dan status."""
+        return otak.status_level(simpanan.muat(anak_id), otak.sekarang_utc())
+
+    @router.get("/anak/{anak_id}/riwayat")
+    def riwayat(anak_id: str) -> dict:
+        """Perkembangan harian dan kemajuan tiap bunyi dari waktu ke waktu (untuk grafik)."""
+        return otak.riwayat(simpanan.muat(anak_id))
+
+    @router.post("/anak/{anak_id}/tanya")
+    async def tanya(anak_id: str, masukan: MasukanTanya) -> dict:
+        """Agent tanya progres: menjawab pertanyaan guru atau orang tua dari data anak."""
+        sekarang = otak.sekarang_utc()
+        status = simpanan.muat(anak_id)
+        baris = otak.peta(status, sekarang)
+        lv = otak.status_level(status, sekarang)
+        nomor = lv["level_sekarang"]
+        nama_lv = next(x["nama"] for x in lv["level"] if x["level"] == nomor)
+        fokus = otak.fokus_belajar(status, sekarang)
+        t = otak.tren(status, sekarang)
+        nama_b = mulut.nama_bunyi
+        data = {
+            "level": {"nomor": nomor, "nama": nama_lv},
+            "level_tuntas": [x["level"] for x in lv["level"] if x["status"] == "tuntas"],
+            "sudah_bisa": [nama_b(b["bunyi"]) for b in baris if b["tingkat_tuntas"]],
+            "sedang_dilatih": [nama_b(b["bunyi"]) for b in baris if b["tingkat"] and b["label"] != "sudah_bisa"],
+            "perlu_perhatian": [nama_b(f["bunyi"]) for f in fokus],
+            "alasan_perhatian": {nama_b(f["bunyi"]): f["alasan"] for f in fokus},
+            "tren_bunyi": {nama_b(b): arah for b, arah in t["arah_bunyi"].items()},
+            "keberhasilan_minggu_ini": (
+                None if t["berhasil_minggu_ini"] is None
+                else "tinggi" if t["berhasil_minggu_ini"] >= 0.8
+                else "cukup" if t["berhasil_minggu_ini"] >= 0.6 else "rendah"
+            ),
+            "hari_latihan_minggu_ini": otak.hari_latihan_minggu_ini(status, sekarang),
+            "streak": otak.streak(status, sekarang),
+        }
+        pembaca = masukan.pembaca
+        rujukan = pengetahuan.muat().cari([f["bunyi"] for f in fokus], pembaca, k=3)
+        hasil = await mulut.tanya_progres(masukan.pertanyaan, data, masukan.nama, pembaca, rujukan)
+        return {**hasil, "data": data}
 
     @router.post("/anak/{anak_id}/saran-belajar")
     async def saran_belajar(anak_id: str, masukan: MasukanNama) -> dict:
@@ -231,6 +283,12 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
                 )
                 status.hari_latihan.append(otak.tanggal_lokal(waktu))
             status.hari_latihan = sorted(set(status.hari_latihan))
+            # Riwayat buatan: penguasaan naik bertahap dalam dua minggu terakhir.
+            for kunci, (p, n, hari) in profil.items():
+                bunyi, tingkat = kunci.split(":")
+                for mundur, faktor in ((hari + 14, 0.45), (hari + 7, 0.75), (hari, 1.0)):
+                    tanggal = otak.tanggal_lokal(sekarang - timedelta(days=mundur))
+                    otak.catat_riwayat(status, tanggal, faktor > 0.6, {(bunyi, int(tingkat)): p * faktor})
             simpanan.simpan(masukan.anak_id, status)
             return {"anak_id": masukan.anak_id, "profil": masukan.profil, "sintetis": True}
 

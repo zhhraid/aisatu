@@ -369,3 +369,63 @@ def test_kata_dengan_h_baru_terbuka_setelah_h_dilatih_di_suku_kata():
     assert not otak.prasyarat_terpenuhi(s, hiu, T0)  # h belum dilatih
     s.kc[("H", 3)] = otak.KC(p=0.9, n=5, terakhir=T0)
     assert otak.prasyarat_terpenuhi(s, hiu, T0)
+
+
+# ------------------------------------------------------------ level dan riwayat
+
+
+def test_anak_baru_hanya_level_1_terbuka_dan_latihan_dari_level_1():
+    s = otak.StatusAnak()
+    peta = otak.status_level(s, T0)
+    assert peta["level_sekarang"] == 1
+    assert [lv["status"] for lv in peta["level"]] == ["terbuka"] + ["terkunci"] * 5
+    for _ in range(20):
+        pilihan = otak.pilih_berikutnya(s, T0)
+        assert pilihan.item.level == 1
+        otak.catat_percobaan(s, pilihan.item, True, len(pilihan.item.urutan), T0)
+
+
+def test_level_berikutnya_terbuka_setelah_60_persen_dan_tuntas_dapat_3_bintang():
+    s = otak.StatusAnak()
+    for b in ("a", "i", "u"):
+        s.kc[(b, 1)] = otak.KC(p=0.9, n=4, terakhir=T0)
+    peta = {lv["level"]: lv for lv in otak.status_level(s, T0)["level"]}
+    assert peta[1]["kemajuan"] == pytest.approx(0.5) and peta[2]["status"] == "terkunci"
+    for b in ("a", "i", "u"):
+        s.kc[(b, 2)] = otak.KC(p=0.9, n=4, terakhir=T0)
+    peta = {lv["level"]: lv for lv in otak.status_level(s, T0)["level"]}
+    assert (peta[1]["status"], peta[1]["bintang"]) == ("tuntas", 3)
+    assert peta[2]["status"] == "terbuka" and peta[3]["status"] == "terkunci"
+    assert otak.status_level(s, T0)["level_sekarang"] == 2
+
+
+def test_level_yang_pernah_dilatih_tetap_terbuka():
+    s = otak.StatusAnak()
+    catat(s, "t1-M", True)  # misalnya guru membuka latihan m lebih dulu
+    peta = {lv["level"]: lv["status"] for lv in otak.status_level(s, T0)["level"]}
+    assert peta[3] == "terbuka" and peta[2] == "terkunci"
+
+
+def test_riwayat_harian_dan_kemajuan_per_bunyi():
+    s = otak.StatusAnak()
+    kemarin = T0 - timedelta(days=1)
+    catat(s, "t1-a", True, waktu=kemarin)
+    catat(s, "t1-a", False, waktu=kemarin)
+    for _ in range(3):
+        catat(s, "t1-a", True)
+    catat(s, "t2-a", True)
+    r = otak.riwayat(s)
+    assert [(h["tanggal"], h["percobaan"], h["berhasil"]) for h in r["harian"]] == [
+        ("2026-11-13", 2, 1), ("2026-11-14", 4, 4),
+    ]
+    garis = r["per_bunyi"]["a"]
+    assert [g["tingkat"] for g in garis] == [1, 2]  # tingkat tertinggi hari itu
+    assert garis[1]["kemajuan"] > garis[0]["kemajuan"]
+    assert otak.StatusAnak.dari_dict(s.ke_dict()).riwayat == s.riwayat
+
+
+def test_riwayat_hanya_menyimpan_60_hari_terakhir():
+    s = otak.StatusAnak()
+    for hari in range(70):
+        catat(s, "t1-a", True, waktu=T0 - timedelta(days=hari))
+    assert len(s.riwayat) == 60 and min(s.riwayat) == "2026-09-16"

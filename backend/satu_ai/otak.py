@@ -22,6 +22,7 @@ from .kurikulum import (
     TINGKAT,
     Item,
     label_penguasaan,
+    LEVEL,
 )
 
 TARGET_BERHASIL = 0.78  # tengah rentang 70-85%
@@ -71,6 +72,8 @@ class StatusAnak:
     percobaan_terakhir: datetime | None = None
     hari_latihan: list[str] = field(default_factory=list)  # tanggal ISO, unik
     sintetis: bool = False  # True untuk data demo buatan
+    # Riwayat per tanggal WIB: {"percobaan", "berhasil", "kc": {"bunyi:tingkat": p terakhir hari itu}}
+    riwayat: dict[str, dict] = field(default_factory=dict)
 
     def ambil(self, bunyi: str, tingkat: int) -> KC:
         kunci = (bunyi, tingkat)
@@ -101,6 +104,7 @@ class StatusAnak:
             "percobaan_terakhir": iso(self.percobaan_terakhir),
             "hari_latihan": list(self.hari_latihan),
             "sintetis": self.sintetis,
+            "riwayat": self.riwayat,
         }
 
     @classmethod
@@ -126,6 +130,7 @@ class StatusAnak:
         status.percobaan_terakhir = waktu(d.get("percobaan_terakhir"))
         status.hari_latihan = list(d.get("hari_latihan", []))
         status.sintetis = d.get("sintetis", False)
+        status.riwayat = {t: {**r, "kc": dict(r.get("kc", {}))} for t, r in d.get("riwayat", {}).items()}
         return status
 
 
@@ -245,7 +250,91 @@ def catat_percobaan(
     tanggal = tanggal_lokal(sekarang)
     if tanggal not in status.hari_latihan:
         status.hari_latihan = (status.hari_latihan + [tanggal])[-60:]
+    catat_riwayat(status, tanggal, berhasil, {(c["bunyi"], c["tingkat"]): c["sesudah"] for c in perubahan})
     return perubahan
+
+
+RIWAYAT_HARI = 60
+
+
+def catat_riwayat(status: StatusAnak, tanggal: str, berhasil: bool, kc: dict[tuple[str, int], float]) -> None:
+    hari = status.riwayat.setdefault(tanggal, {"percobaan": 0, "berhasil": 0, "kc": {}})
+    hari["percobaan"] += 1
+    hari["berhasil"] += int(berhasil)
+    for (bunyi, tingkat), p in kc.items():
+        hari["kc"][f"{bunyi}:{tingkat}"] = round(p, 4)
+    for lama in sorted(status.riwayat)[:-RIWAYAT_HARI]:
+        del status.riwayat[lama]
+
+
+def riwayat(status: StatusAnak) -> dict:
+    """Perkembangan dari waktu ke waktu, untuk grafik di aplikasi guru.
+
+    kemajuan bunyi = (tingkat - 1 + penguasaan) / 4, jadi 0 sampai 1 melintasi keempat
+    tingkat: naik tingkat dan naik penguasaan sama-sama terlihat sebagai garis naik.
+    """
+    harian, per_bunyi = [], {b: [] for b in BUNYI}
+    for tanggal in sorted(status.riwayat):
+        hari = status.riwayat[tanggal]
+        harian.append(
+            {
+                "tanggal": tanggal,
+                "percobaan": hari["percobaan"],
+                "berhasil": hari["berhasil"],
+                "tingkat_berhasil": round(hari["berhasil"] / hari["percobaan"], 3) if hari["percobaan"] else None,
+            }
+        )
+        terbaik: dict[str, tuple[int, float]] = {}
+        for kunci, p in hari["kc"].items():
+            bunyi, tingkat = kunci.split(":")
+            if int(tingkat) >= terbaik.get(bunyi, (0, 0.0))[0]:
+                terbaik[bunyi] = (int(tingkat), p)
+        for bunyi, (tingkat, p) in terbaik.items():
+            per_bunyi.setdefault(bunyi, []).append(
+                {"tanggal": tanggal, "tingkat": tingkat, "p": p, "kemajuan": round((tingkat - 1 + p) / 4, 3)}
+            )
+    return {"harian": harian, "per_bunyi": {b: v for b, v in per_bunyi.items() if v}}
+
+
+# ---------------------------------------------------------------- level
+
+
+def _kemajuan(status: StatusAnak, bunyi: str, tingkat: int, sekarang: datetime) -> float:
+    """0 sampai 1 menuju "sudah bisa"; 0 kalau belum pernah dilatih."""
+    k = status.kc.get((bunyi, tingkat))
+    if not k or k.n == 0:
+        return 0.0
+    return min(1.0, p_kini(status, bunyi, tingkat, sekarang) / AMBANG_SUDAH_BISA)
+
+
+AMBANG_BUKA_LEVEL = 0.6
+
+
+def status_level(status: StatusAnak, sekarang: datetime) -> dict:
+    """Peta petualangan: kemajuan, bintang, dan status tiap level."""
+    hasil, terbuka_sebelumnya = [], True
+    for lv in LEVEL:
+        nilai = [_kemajuan(status, b, t, sekarang) for b in lv.bunyi for t in lv.tingkat]
+        kemajuan = sum(nilai) / len(nilai)
+        pernah = any((k := status.kc.get((b, t))) and k.n > 0 for b in lv.bunyi for t in lv.tingkat)
+        terbuka = lv.nomor == 1 or terbuka_sebelumnya or pernah
+        tuntas = kemajuan >= 0.999
+        hasil.append(
+            {
+                "level": lv.nomor,
+                "nama": lv.nama,
+                "kemajuan": round(kemajuan, 3),
+                "bintang": 3 if tuntas else 2 if kemajuan >= 0.66 else 1 if kemajuan >= 0.33 else 0,
+                "status": "tuntas" if tuntas else "terbuka" if terbuka else "terkunci",
+            }
+        )
+        terbuka_sebelumnya = terbuka and kemajuan >= AMBANG_BUKA_LEVEL
+    sekarang_lv = next((h["level"] for h in hasil if h["status"] == "terbuka"), LEVEL[-1].nomor)
+    return {"level_sekarang": sekarang_lv, "level": hasil}
+
+
+def level_terbuka_tertinggi(status: StatusAnak, sekarang: datetime) -> int:
+    return max(h["level"] for h in status_level(status, sekarang)["level"] if h["status"] != "terkunci")
 
 
 def tingkat_berhasil(status: StatusAnak) -> float | None:
@@ -300,13 +389,17 @@ def _masih_tuntas(status: StatusAnak, item: Item, sekarang: datetime) -> bool:
     )
 
 
+def _terbuka(status: StatusAnak, sekarang: datetime) -> list[Item]:
+    """Item yang prasyaratnya terpenuhi dan levelnya sudah terbuka di peta."""
+    batas = level_terbuka_tertinggi(status, sekarang)
+    return [it for it in ITEM if it.level <= batas and prasyarat_terpenuhi(status, it, sekarang)]
+
+
 def _kandidat(status: StatusAnak, sekarang: datetime) -> list[Item]:
     return [
         it
-        for it in ITEM
-        if prasyarat_terpenuhi(status, it, sekarang)
-        and not _masih_tuntas(status, it, sekarang)
-        and not _sudah_lewat(status, it, sekarang)
+        for it in _terbuka(status, sekarang)
+        if not _masih_tuntas(status, it, sekarang) and not _sudah_lewat(status, it, sekarang)
     ]
 
 
@@ -354,7 +447,7 @@ def pilih_berikutnya(
     kandidat = _kandidat(status, sekarang)
     if not kandidat:
         # Tidak ada yang perlu dilatih: ulang yang paling lemah di tingkat tertinggi yang terbuka.
-        terbuka = [it for it in ITEM if prasyarat_terpenuhi(status, it, sekarang)]
+        terbuka = _terbuka(status, sekarang)
         puncak = max(it.tingkat for it in terbuka)
         item = min(
             (it for it in terbuka if it.tingkat == puncak),
@@ -368,12 +461,7 @@ def pilih_berikutnya(
     if laju is not None and laju < BATAS_BAWAH:
         # Terlalu sering gagal: beri latihan yang kemungkinan besar berhasil, termasuk
         # yang sudah tuntas, supaya tingkat berhasil kembali ke rentang target.
-        mudah = [
-            it
-            for it in ITEM
-            if prasyarat_terpenuhi(status, it, sekarang)
-            and perkiraan_item(status, it, sekarang) >= BATAS_BAWAH
-        ]
+        mudah = [it for it in _terbuka(status, sekarang) if perkiraan_item(status, it, sekarang) >= BATAS_BAWAH]
         if mudah:
             kandidat, alasan = mudah, "penguatan"
         elif len(tingkat_ada) > 1:
@@ -565,3 +653,28 @@ def fokus_belajar(status: StatusAnak, sekarang: datetime, jumlah: int = 3) -> li
         if len(hasil) >= jumlah:
             break
     return hasil
+
+
+def tren(status: StatusAnak, sekarang: datetime, hari: int = 7) -> dict:
+    """Perbandingan minggu ini dengan sebelumnya: arah kemajuan tiap bunyi dan tingkat berhasil."""
+    batas = tanggal_lokal(sekarang - timedelta(days=hari))
+    r = riwayat(status)
+    arah = {}
+    for bunyi, garis in r["per_bunyi"].items():
+        lama = [g["kemajuan"] for g in garis if g["tanggal"] < batas]
+        baru = [g["kemajuan"] for g in garis if g["tanggal"] >= batas]
+        if lama and baru:
+            beda = baru[-1] - lama[-1]
+            arah[bunyi] = "naik" if beda > 0.03 else "turun" if beda < -0.03 else "tetap"
+        elif baru:
+            arah[bunyi] = "baru dilatih"
+
+    def laju(daftar: list[dict]) -> float | None:
+        total = sum(h["percobaan"] for h in daftar)
+        return round(sum(h["berhasil"] for h in daftar) / total, 2) if total else None
+
+    return {
+        "arah_bunyi": arah,
+        "berhasil_minggu_ini": laju([h for h in r["harian"] if h["tanggal"] >= batas]),
+        "berhasil_sebelumnya": laju([h for h in r["harian"] if h["tanggal"] < batas]),
+    }

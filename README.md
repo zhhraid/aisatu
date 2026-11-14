@@ -14,7 +14,7 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 
 Sudah diuji:
 
-- Backend: 117 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
+- Backend: 130 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
 - Mata: 53 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
@@ -90,6 +90,9 @@ Semua di bawah `/ai`. Belum ada login; tambahkan saat router dipasang ke aplikas
 | `POST /ai/anak/{id}/laporan-mingguan` | web orang tua | Laporan tiga bagian |
 | `POST /ai/kelas/ringkasan` | mobile guru | Ringkasan kelas 2 sampai 3 kalimat |
 | `POST /ai/anak/{id}/saran-belajar` | mobile guru | 2 sampai 3 saran belajar dari data anak dan rujukan, beserta sumbernya |
+| `GET /ai/anak/{id}/level` | web siswa | Peta petualangan: 6 level dengan kemajuan, bintang, dan status (terkunci, terbuka, tuntas) |
+| `GET /ai/anak/{id}/riwayat` | mobile guru | Perkembangan harian dan kemajuan tiap bunyi dari waktu ke waktu, untuk grafik |
+| `POST /ai/anak/{id}/tanya` | mobile guru, web orang tua | Agent tanya progres: `{"nama", "pertanyaan", "pembaca": "guru" atau "orang_tua"}`, dijawab dari data anak dan rujukan |
 | `POST /ai/demo/isi` | demo | Mengisi satu anak dengan data buatan (hanya saat `SATU_DEMO=1`) |
 
 Kirim hasil percobaan:
