@@ -34,6 +34,8 @@ export interface FramePercobaan {
   /** null kalau wajah tidak terlihat atau posisinya tidak layak dinilai. */
   fitur: Fitur | null;
   suara: boolean;
+  /** Ada hembusan napas (untuk "h"). Kosong dianggap tidak ada. */
+  napas?: boolean;
 }
 
 export type StatusPercobaan = 'berjalan' | 'jeda' | 'berhasil' | 'gagal';
@@ -48,7 +50,7 @@ export interface Keadaan {
   suara: boolean;
   /** 0 sampai 1, kemajuan seluruh percobaan. */
   progres: number;
-  petunjuk: Petunjuk | 'bersuara' | null;
+  petunjuk: Petunjuk | 'bersuara' | 'hembuskan' | null;
   sisaMs: number;
   /** 0 sampai 1, kemiripan bentuk bibir frame ini dengan bentuk target (untuk bilah "Kemiripan"). */
   kemiripan: number;
@@ -145,9 +147,14 @@ export class Percobaan {
     this.kemiripanTerakhir = kemiripan(target, frame.fitur, this.ambang, !this.tunggal);
     this.jumlahKemiripan += this.kemiripanTerakhir * dt;
     const suara = frame.suara || this.opsi.tanpaSuara;
-    // Di dalam kata, bibir mengatup tidak perlu bersuara (b dan p memang senyap sesaat).
-    const perluSuara = this.tunggal || target !== 'M';
-    const ok = bentuk.cocok && (!perluSuara || suara);
+    const napas = frame.napas || this.opsi.tanpaSuara;
+    // "h" dinilai dari hembusan napas, bukan suara bernada. "f" boleh bersuara (v) atau
+    // berupa hembusan (f). Di dalam kata, bibir mengatup tidak perlu bersuara (b dan p
+    // memang senyap sesaat).
+    const perluNapas = target === 'H';
+    const perluSuara = !perluNapas && (this.tunggal || target !== 'M');
+    const bunyiOk = perluNapas ? napas : !perluSuara || suara || (target === 'F' && napas);
+    const ok = bentuk.cocok && bunyiOk;
 
     if (ok) {
       this.tahan += dt;
@@ -166,7 +173,13 @@ export class Percobaan {
       this.status = 'gagal';
     }
 
-    const petunjuk = !bentuk.cocok ? bentuk.petunjuk : perluSuara && !suara ? 'bersuara' : null;
+    const petunjuk = !bentuk.cocok
+      ? bentuk.petunjuk
+      : bunyiOk
+        ? null
+        : perluNapas
+          ? 'hembuskan'
+          : 'bersuara';
     return this.keadaan(bentuk.cocok, suara, petunjuk);
   }
 

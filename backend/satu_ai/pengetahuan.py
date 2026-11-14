@@ -32,6 +32,9 @@ KATA_BUNYI: dict[str, list[str]] = {
     "o": ["vokal o", "bunyi o", "/o/", "bibir bulat", "membulat"],
     "M": ["bilabial", "dwibibir", "kedua bibir", "bibir rapat", "merapatkan bibir",
           "bunyi m", "bunyi b", "bunyi p", "/m/", "/b/", "/p/"],
+    "e": ["vokal e", "bunyi e", "/e/", "/é/", "/ê/", "pepet", "taling"],
+    "F": ["labiodental", "bibir bawah", "gigi atas", "bunyi f", "bunyi v", "/f/", "/v/"],
+    "H": ["glotal", "hembusan", "embusan", "napas", "bunyi h", "/h/", "tisu", "lilin"],
 }
 
 KATA_PEMBACA: dict[str, list[str]] = {

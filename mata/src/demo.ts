@@ -5,7 +5,7 @@ import {
 import { Mata, type FrameMata } from './mata';
 import type { HasilPercobaan, Keadaan } from './percobaan';
 import { ABJAD, gambarBibir, koordinatBentuk } from './tutorial';
-import { SEMUA_BUNYI, type Bunyi, type Fitur } from './tipe';
+import { BENTUK_BIBIR, SEMUA_BUNYI, type Bunyi, type Fitur } from './tipe';
 
 const el = <T extends HTMLElement>(id: string): T => {
   const node = document.getElementById(id);
@@ -26,7 +26,7 @@ const TEKS_KALIBRASI = {
   banyak_bergerak: 'Mulut bergerak saat kalibrasi. Ulangi sambil diam.',
   mulut_terbuka: 'Mulut terbuka saat kalibrasi. Ulangi dengan mulut tertutup.',
 } as const;
-const NAMA_FITUR: (keyof Fitur)[] = ['rahang', 'bulat', 'lebar', 'tekan', 'celah'];
+const NAMA_FITUR: (keyof Fitur)[] = ['rahang', 'bulat', 'lebar', 'tekan', 'celah', 'gulung'];
 
 let mata: Mata | null = null;
 let sedangCoba = false;
@@ -76,7 +76,11 @@ function tampilkanFrame(frame: FrameMata): void {
   tTampil = frame.t;
   el('statusKamera').textContent = `${TEKS_POSISI[frame.posisi]} · ${fps.toFixed(0)} frame per detik`;
   for (const [bunyi, span] of keping) {
-    const cocok = frame.fitur !== null && nilaiBentuk(bunyi, frame.fitur, mata?.ambang).cocok;
+    // "h" menyala hanya kalau ada hembusan napas, bukan dari bentuk bibir saja.
+    const cocok =
+      frame.fitur !== null &&
+      nilaiBentuk(bunyi, frame.fitur, mata?.ambang).cocok &&
+      (bunyi !== 'H' || frame.napas);
     span.classList.toggle('nyala', cocok);
   }
   for (const nama of NAMA_FITUR) {
@@ -84,7 +88,7 @@ function tampilkanFrame(frame: FrameMata): void {
   }
   setUkuran('suara', frame.rms, 0.2);
   el('statusSuara').textContent = mata?.mikrofonAktif
-    ? `Suara: ${frame.suara ? 'ada' : 'tidak ada'} (ambang ${mata.ambangSuara.toFixed(3)})`
+    ? `Suara: ${frame.suara ? 'ada' : 'tidak ada'} (ambang ${mata.ambangSuara.toFixed(3)}) · hembusan: ${frame.napas ? 'ada' : 'tidak ada'}`
     : 'Mikrofon tidak aktif. Centang "Abaikan suara" untuk menguji bentuk bibir.';
 }
 
@@ -108,6 +112,7 @@ function tampilkanKeadaan(k: Keadaan): void {
   const petunjuk = el('petunjuk');
   if (k.status === 'jeda') petunjuk.textContent = 'Jeda: wajah tidak terlihat';
   else if (k.petunjuk === 'bersuara') petunjuk.textContent = 'Bentuk sudah benar, sekarang bersuara';
+  else if (k.petunjuk === 'hembuskan') petunjuk.textContent = 'Hembuskan napas (seperti meniup tisu)';
   else if (k.petunjuk) petunjuk.textContent = TEKS_PETUNJUK[k.petunjuk];
   else petunjuk.textContent = k.status === 'berjalan' ? 'Tahan...' : '';
 }
@@ -299,12 +304,15 @@ pilihHuruf('a');
 
 // ---------------------------------------------------------- setel otomatis
 
-const NAMA_BENTUK: Record<Bunyi, string> = {
+type BentukBibir = Exclude<Bunyi, 'H'>;
+const NAMA_BENTUK: Record<BentukBibir, string> = {
   a: '"aaa", mulut terbuka lebar',
   i: '"iii", bibir ditarik ke samping',
   u: '"uuu", bibir mengerucut',
   o: '"ooo", bibir bulat dan agak terbuka',
   M: '"mmm", bibir rapat',
+  e: '"eee", mulut terbuka sedikit',
+  F: '"fff", gigi atas menempel di bibir bawah',
 };
 const tunggu = (ms: number) => new Promise((selesai) => setTimeout(selesai, ms));
 
@@ -329,10 +337,10 @@ tombol('tombolSetel').addEventListener('click', async () => {
     return;
   }
   tombol('tombolSetel').disabled = true;
-  const contoh = {} as Record<Bunyi, Fitur>;
+  const contoh = {} as Record<BentukBibir, Fitur>;
   try {
-    for (const bunyi of SEMUA_BUNYI) {
-      pilihHuruf(bunyi === 'M' ? 'm' : bunyi);
+    for (const bunyi of BENTUK_BIBIR as BentukBibir[]) {
+      pilihHuruf(bunyi === 'M' ? 'm' : bunyi === 'F' ? 'f' : bunyi);
       for (let hitung = 3; hitung > 0; hitung--) {
         arahan.textContent = `Siap-siap: ${NAMA_BENTUK[bunyi]} (${hitung})`;
         await tunggu(600);

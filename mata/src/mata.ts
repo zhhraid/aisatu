@@ -32,6 +32,8 @@ export interface FrameMata {
   fitur: Fitur | null;
   suara: boolean;
   rms: number;
+  /** Ada hembusan napas (desis tanpa nada), untuk "h". */
+  napas: boolean;
 }
 
 type Pendengar = (frame: FrameMata) => void;
@@ -155,7 +157,7 @@ export class Mata {
     const hasil = this.penanda.detectForVideo(video, kini);
     const titik = hasil.faceLandmarks[0];
     const kategori = hasil.faceBlendshapes[0]?.categories;
-    const { ada, rms } = this.suara.adaSuara(kini);
+    const { ada, rms, napas } = this.suara.adaSuara(kini);
 
     let posisi: PosisiWajah = 'tidak_ada';
     let fitur: Fitur | null = null;
@@ -169,7 +171,7 @@ export class Mata {
         fitur = hitungFitur(this.blendTerakhir, this.netral, celahBibir(titik, lebar, tinggi));
       }
     }
-    const frame: FrameMata = { t: kini, posisi, fitur, suara: ada, rms };
+    const frame: FrameMata = { t: kini, posisi, fitur, suara: ada, rms, napas };
     for (const pendengar of this.pendengar) pendengar(frame);
   };
 
@@ -208,7 +210,7 @@ export class Mata {
     let batal = (): void => {};
     const hasil = new Promise<HasilPercobaan | null>((selesai) => {
       const lepas = this.padaFrame((frame) => {
-        const keadaan = percobaan.proses({ t: frame.t, fitur: frame.fitur, suara: frame.suara });
+        const keadaan = percobaan.proses({ t: frame.t, fitur: frame.fitur, suara: frame.suara, napas: frame.napas });
         padaKeadaan?.(keadaan);
         const akhir = percobaan.hasil();
         if (akhir) {

@@ -31,7 +31,8 @@ export type BentukTutorial =
   | 'o'
   | 'katup'
   | 'gigi_bibir'
-  | 'lidah';
+  | 'lidah'
+  | 'hembusan';
 
 interface ParamBentuk {
   /** Setengah lebar mulut, dari pusat ke sudut. */
@@ -62,6 +63,7 @@ const PARAM: Record<BentukTutorial, ParamBentuk> = {
     lebar: 0.31, buka: 0.04, bulat: 0, tebalAtas: 0.065, tebalBawah: 0.06, bibirBawahNaik: true,
   },
   lidah: { lebar: 0.31, buka: 0.08, bulat: 0.05, tebalAtas: 0.065, tebalBawah: 0.08 },
+  hembusan: { lebar: 0.3, buka: 0.15, bulat: 0.1, tebalAtas: 0.06, tebalBawah: 0.075 },
 };
 
 export interface HurufTutorial {
@@ -83,6 +85,7 @@ const PETUNJUK: Record<BentukTutorial, string> = {
   katup: 'Rapatkan kedua bibir, lalu buka.',
   gigi_bibir: 'Gigi atas menyentuh bibir bawah.',
   lidah: 'Bibir sedikit terbuka; bunyi ini dibentuk lidah.',
+  hembusan: 'Buka mulut dan hembuskan napas. Coba dengan tisu di depan mulut.',
 };
 
 const BENTUK_HURUF: Record<string, BentukTutorial> = {
@@ -90,19 +93,20 @@ const BENTUK_HURUF: Record<string, BentukTutorial> = {
   m: 'katup', b: 'katup', p: 'katup',
   f: 'gigi_bibir', v: 'gigi_bibir',
   w: 'u', y: 'i',
+  h: 'hembusan',
 };
 
-// Hanya bentuk ini yang punya aturan di aturan.ts.
+// Bentuk yang punya aturan di aturan.ts. "h" dinilai dari hembusan napas.
 const DINILAI: Partial<Record<BentukTutorial, Bunyi>> = {
-  a: 'a', i: 'i', u: 'u', o: 'o', katup: 'M',
+  a: 'a', i: 'i', u: 'u', e: 'e', o: 'o', katup: 'M', gigi_bibir: 'F', hembusan: 'H',
 };
 
 /** Data tutorial untuk satu huruf. Huruf di luar a-z memakai bentuk netral. */
 export function hurufTutorial(huruf: string): HurufTutorial {
   const h = huruf.toLowerCase();
   const bentuk: BentukTutorial = BENTUK_HURUF[h] ?? (/^[a-z]$/.test(h) ? 'lidah' : 'netral');
-  // w dan y memakai bentuk u dan i, tapi tidak dinilai sebagai huruf tersendiri.
-  const dinilai = h === 'w' || h === 'y' ? null : (DINILAI[bentuk] ?? null);
+  // w dan y memakai bentuk u dan i, dan dinilai sebagai bentuk itu.
+  const dinilai = DINILAI[bentuk] ?? null;
   return { huruf: h, bentuk, dinilai, petunjuk: PETUNJUK[bentuk] };
 }
 

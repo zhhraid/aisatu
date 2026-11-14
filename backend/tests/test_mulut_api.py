@@ -220,7 +220,8 @@ def test_tugas_laporan_dan_ringkasan_tanpa_llm_memakai_templat(klien):
 
 def test_kurikulum_dan_status(klien):
     kurikulum = klien.get("/ai/kurikulum").json()
-    assert kurikulum["bunyi"] == ["a", "i", "u", "o", "M"] and len(kurikulum["item"]) == 46
+    assert kurikulum["bunyi"] == ["a", "i", "u", "o", "M", "e", "F", "H"]
+    assert len(kurikulum["item"]) == 2 * 8 + 25 + 37  # bunyi di tingkat 1-2, suku kata, kata
     assert klien.get("/ai/status").json() == {
         "llm_tersedia": False,
         "llm_kurang": ["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"],

@@ -6,6 +6,18 @@ export function hitungRms(sampel: Float32Array): number {
   return Math.sqrt(jumlah / sampel.length);
 }
 
+/**
+ * Seberapa sering sinyal berganti tanda per sampel (0 sampai 1). Suara bernada seperti
+ * vokal bergetar pelan (rendah); desis dan hembusan napas seperti "h" berupa derau (tinggi).
+ */
+export function hitungZcr(sampel: Float32Array): number {
+  let ganti = 0;
+  for (let i = 1; i < sampel.length; i++) {
+    if ((sampel[i]! >= 0) !== (sampel[i - 1]! >= 0)) ganti++;
+  }
+  return sampel.length > 1 ? ganti / (sampel.length - 1) : 0;
+}
+
 export interface OpsiSuara {
   /** Suara dianggap ada kalau kenyaringan melebihi kebisingan ruangan dikali ini. */
   faktor: number;
@@ -13,9 +25,16 @@ export interface OpsiSuara {
   ambangMin: number;
   /** Suara dianggap masih ada selama ini setelah kenyaringan turun, supaya tidak berkedip. */
   tahanMs: number;
+  /** Hembusan lebih pelan dari suara biasa: dianggap ada kalau melebihi kebisingan dikali ini. */
+  faktorNapas: number;
+  ambangNapasMin: number;
+  /** Zero-crossing rate minimal supaya bunyi dianggap hembusan, bukan suara bernada. */
+  zcrNapas: number;
 }
 
-export const OPSI_SUARA: OpsiSuara = { faktor: 2.5, ambangMin: 0.015, tahanMs: 150 };
+export const OPSI_SUARA: OpsiSuara = {
+  faktor: 2.5, ambangMin: 0.015, tahanMs: 150, faktorNapas: 1.6, ambangNapasMin: 0.006, zcrNapas: 0.12,
+};
 
 /** Memutuskan ada suara atau tidak dari nilai kenyaringan. Tanpa Web Audio, jadi bisa diuji. */
 export class PenentuSuara {
@@ -36,6 +55,18 @@ export class PenentuSuara {
     if (rms > this.ambang) this.terakhirAda = t;
     return t - this.terakhirAda <= this.opsi.tahanMs;
   }
+
+  get ambangNapas(): number {
+    return Math.max(this.kebisingan * this.opsi.faktorNapas, this.opsi.ambangNapasMin);
+  }
+
+  /** Ada hembusan napas: cukup keras di atas kebisingan dan berupa derau, bukan nada. */
+  napas(rms: number, zcr: number, t: number): boolean {
+    if (rms > this.ambangNapas && zcr >= this.opsi.zcrNapas) this.terakhirNapas = t;
+    return t - this.terakhirNapas <= this.opsi.tahanMs;
+  }
+
+  private terakhirNapas = -Infinity;
 }
 
 /** Mikrofon lewat Web Audio API. */
@@ -82,9 +113,10 @@ export class DeteksiSuara {
     return rata;
   }
 
-  adaSuara(t: number): { ada: boolean; rms: number } {
+  adaSuara(t: number): { ada: boolean; rms: number; napas: boolean } {
     const rms = this.rms();
-    return { ada: this.penentu.perbarui(rms, t), rms };
+    const zcr = this.penyangga ? hitungZcr(this.penyangga) : 0;
+    return { ada: this.penentu.perbarui(rms, t), rms, napas: this.penentu.napas(rms, zcr, t) };
   }
 
   async berhenti(): Promise<void> {

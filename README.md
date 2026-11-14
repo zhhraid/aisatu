@@ -14,8 +14,8 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 
 Sudah diuji:
 
-- Backend: 109 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
-- Mata: 43 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
+- Backend: 116 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
+- Mata: 49 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
 Belum diuji, dan harus kalian lakukan:
@@ -246,16 +246,16 @@ if (akhir) await kirim({ item_id: item.id, ...akhir });
 
 `mata/src/tutorial.ts` berisi bentuk bibir contoh untuk huruf a sampai z, sebagai koordinat 40 titik bibir dengan indeks yang sama dengan MediaPipe (`FACE_LANDMARKS_LIPS`). Bentuknya dibangkitkan dari beberapa parameter (lebar, bukaan, kebulatan), bukan direkam dari wajah, dan arahnya disamakan dengan aturan penilai.
 
-Huruf dikelompokkan menurut bentuk bibir, karena banyak huruf terlihat sama dari luar:
+Huruf dikelompokkan menurut bentuk yang terlihat, karena banyak huruf terlihat sama dari luar:
 
-| Bentuk | Huruf | Dinilai kamera |
+| Bentuk | Huruf | Dinilai |
 | --- | --- | --- |
-| a, i, u, o | a, i, u, o | Ya |
-| Mengatup | m, b, p | Ya |
-| e | e | Tidak (hanya contoh) |
-| Gigi ke bibir bawah | f, v | Tidak |
-| Seperti u / seperti i | w / y | Tidak |
-| Dibentuk lidah | c, d, g, h, j, k, l, n, q, r, s, t, x, z | Tidak |
+| a, i, u, e, o | a, i, u, e, o | Ya, dari bentuk bibir |
+| Bibir menutup (M) | m, b, p | Ya, dari bentuk bibir |
+| Gigi dan bibir (F) | f, v | Ya: bibir bawah tergulung ke bawah gigi atas, plus hembusan atau suara |
+| Bibir bundar / melebar | w / y | Ya, sebagai bentuk u / i |
+| Hembusan (H) | h | Ya, dari mikrofon: desis napas (zero-crossing tinggi), mulut terbuka |
+| Dibentuk lidah | c, d, g, j, k, l, n, q, r, s, t, x, z | Tidak; hanya tutorial |
 
 ```ts
 import { hurufTutorial, koordinatHuruf, gambarBibir } from './tutorial';

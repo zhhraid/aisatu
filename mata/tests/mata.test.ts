@@ -5,7 +5,7 @@ import {
 import { ambilBlendshape, celahBibir, hitungFitur, posisiWajah } from '../src/fitur';
 import { Kalibrasi } from '../src/kalibrasi';
 import { hitungBintang, Percobaan, type FramePercobaan } from '../src/percobaan';
-import { hitungRms, PenentuSuara } from '../src/suara';
+import { hitungRms, hitungZcr, PenentuSuara } from '../src/suara';
 import type { Bunyi, Fitur, Titik } from '../src/tipe';
 
 const DIAM: Fitur = { rahang: 0, bulat: 0, lebar: 0, tekan: 0, celah: 0.005 };
@@ -16,6 +16,9 @@ const BENTUK: Record<Bunyi, Fitur> = {
   u: { rahang: 0.1, bulat: 0.6, lebar: 0, tekan: 0, celah: 0.03 },
   o: { rahang: 0.35, bulat: 0.5, lebar: 0, tekan: 0, celah: 0.1 },
   M: { rahang: 0.02, bulat: 0.05, lebar: 0, tekan: 0.1, celah: 0.004 },
+  e: { rahang: 0.2, bulat: 0.03, lebar: 0.2, tekan: 0, celah: 0.06 },
+  F: { rahang: 0.03, bulat: 0.05, lebar: 0.05, tekan: 0.1, celah: 0.008, gulung: 0.35 },
+  H: { rahang: 0.2, bulat: 0.05, lebar: 0.05, tekan: 0, celah: 0.08 },
 };
 
 describe('aturan bentuk bibir', () => {
@@ -391,26 +394,30 @@ describe('tutorial bibir a-z', () => {
 
   it('hanya huruf yang punya aturan yang ditandai dinilai, dan cocok dengan urutan bentuk', () => {
     const dinilai = ABJAD.filter((h) => h.dinilai).map((h) => h.huruf).join('');
-    expect(dinilai).toBe('abimopu');
-    for (const h of 'abimopu') {
+    expect(dinilai).toBe('abefhimopuvwy');
+    for (const h of 'abefhimopuvwy') {
       expect(urutanDariTeks(h)).toEqual([hurufTutorial(h).dinilai]);
     }
     expect(hurufTutorial('r')).toMatchObject({ bentuk: 'lidah', dinilai: null });
     expect(hurufTutorial('F')).toMatchObject({ huruf: 'f', bentuk: 'gigi_bibir' });
-    expect(hurufTutorial('w').bentuk).toBe('u');
+    expect(hurufTutorial('w')).toMatchObject({ bentuk: 'u', dinilai: 'u' });
+    expect(hurufTutorial('h')).toMatchObject({ bentuk: 'hembusan', dinilai: 'H' });
   });
 });
 
-const SEMUA: Bunyi[] = ['a', 'i', 'u', 'o', 'M'];
+type BentukBibir = Exclude<Bunyi, 'H'>;
+const SEMUA: BentukBibir[] = ['a', 'i', 'u', 'o', 'M', 'e', 'F'];
 
 describe('ambang dan penyetelan otomatis', () => {
   // Contoh bentuk satu orang setelah kalibrasi netral, dengan gerakan kecil seperti saat bicara biasa.
-  const ORANG: Record<Bunyi, Fitur> = {
+  const ORANG: Record<BentukBibir, Fitur> = {
     a: { rahang: 0.35, bulat: 0.05, lebar: 0.05, tekan: 0, celah: 0.12 },
     i: { rahang: 0.08, bulat: 0.02, lebar: 0.22, tekan: 0, celah: 0.03 },
     u: { rahang: 0.04, bulat: 0.45, lebar: 0, tekan: 0, celah: 0.02 },
     o: { rahang: 0.2, bulat: 0.32, lebar: 0, tekan: 0, celah: 0.07 },
     M: { rahang: 0.01, bulat: 0.06, lebar: 0.03, tekan: 0.1, celah: 0.003 },
+    e: { rahang: 0.2, bulat: 0.03, lebar: 0.15, tekan: 0, celah: 0.06 },
+    F: { rahang: 0.03, bulat: 0.04, lebar: 0.04, tekan: 0.08, celah: 0.01, gulung: 0.3 },
   };
 
   it('ambang bawaan tidak pernah meloloskan satu bentuk sebagai dua bunyi', () => {
@@ -425,7 +432,7 @@ describe('ambang dan penyetelan otomatis', () => {
     // Orang yang gerakannya lebih kecil lagi: ambang bawaan gagal, ambang hasil setel berhasil.
     const kecil = Object.fromEntries(
       SEMUA.map((b) => [b, { ...ORANG[b], rahang: ORANG[b].rahang * 0.6, bulat: ORANG[b].bulat * 0.6, lebar: ORANG[b].lebar * 0.6 }]),
-    ) as Record<Bunyi, Fitur>;
+    ) as Record<BentukBibir, Fitur>;
     expect(SEMUA.some((b) => !nilaiBentuk(b, kecil[b]).cocok)).toBe(true);
     const hasil = setelOtomatis(kecil);
     expect(hasil.ok).toBe(true);
@@ -463,5 +470,68 @@ describe('ambang dan penyetelan otomatis', () => {
   it('median tahan terhadap satu frame yang meleset', () => {
     const m = medianFitur([ORANG.a, ORANG.a, { ...ORANG.a, rahang: 0.9 }]);
     expect(m.rahang).toBeCloseTo(0.35);
+  });
+});
+
+describe('e, f/v, w/y, dan h', () => {
+  it('e di antara i dan a; f dibedakan dari bibir rapat dan i oleh gulungan bibir bawah', () => {
+    const lolos = (f: Fitur) => SEMUA.filter((b) => nilaiBentuk(b, f).cocok);
+    expect(lolos(BENTUK.e)).toEqual(['e']);
+    expect(lolos(BENTUK.F)).toEqual(['F']);
+    expect(lolos(BENTUK.M)).toEqual(['M']);
+    expect(nilaiBentuk('F', BENTUK.M).petunjuk).toBe('gigi_ke_bibir');
+    expect(nilaiBentuk('e', DIAM).petunjuk).toBe('buka_sedikit');
+  });
+
+  it('w dinilai seperti u, y seperti i, h sebagai hembusan', () => {
+    expect(urutanDariTeks('wahyu')).toEqual(['u', 'a', 'H', 'i', 'u']);
+    expect(urutanDariTeks('maaf')).toEqual(['M', 'a', 'F']);
+    expect(urutanDariTeks('meja')).toEqual(['M', 'e', 'a']);
+    expect(urutanDariTeks('hiu')).toEqual(['H', 'i', 'u']);
+  });
+
+  function jalankanNapas(urutan: Bunyi[], bagian: [Fitur, boolean, boolean, number][]) {
+    const p = new Percobaan(urutan, AMBANG_BAWAAN);
+    let t = 0;
+    let keadaan = null;
+    for (const [fitur, suara, napas, n] of bagian) {
+      for (let i = 0; i < n && !p.hasil(); i++, t += 50) keadaan = p.proses({ t, fitur, suara, napas });
+    }
+    return { hasil: p.hasil(), keadaan: keadaan! };
+  }
+
+  it('h berhasil dengan mulut terbuka dan hembusan, bukan dengan suara bernada', () => {
+    expect(jalankanNapas(['H'], [[BENTUK.H, false, true, 20]]).hasil?.berhasil).toBe(true);
+    const bersuara = jalankanNapas(['H'], [[BENTUK.H, true, false, 30]]);
+    expect(bersuara.hasil).toBeNull();
+    expect(bersuara.keadaan.petunjuk).toBe('hembuskan');
+    expect(jalankanNapas(['H'], [[BENTUK.M, false, true, 30]]).keadaan.petunjuk).toBe('buka_mulut');
+  });
+
+  it('f boleh berupa hembusan (f) atau bersuara (v)', () => {
+    expect(jalankanNapas(['F'], [[BENTUK.F, false, true, 20]]).hasil?.berhasil).toBe(true);
+    expect(jalankanNapas(['F'], [[BENTUK.F, true, false, 20]]).hasil?.berhasil).toBe(true);
+    expect(jalankanNapas(['F'], [[BENTUK.F, false, false, 30]]).hasil).toBeNull();
+  });
+
+  it('kata "hiu" dinilai sebagai hembusan, lalu i, lalu u', () => {
+    const { hasil } = jalankanNapas(urutanDariTeks('hiu'), [
+      [BENTUK.H, false, true, 4],
+      [BENTUK.i, true, false, 5],
+      [BENTUK.u, true, false, 5],
+    ]);
+    expect(hasil).toMatchObject({ berhasil: true, langkah_tercapai: 3 });
+  });
+
+  it('hembusan dikenali dari derau (zero-crossing tinggi), bukan dari nada', () => {
+    const derau = new Float32Array(1024).map((_, i) => (i % 2 ? 0.05 : -0.05));
+    const nada = new Float32Array(1024).map((_, i) => 0.05 * Math.sin((2 * Math.PI * 200 * i) / 48000));
+    expect(hitungZcr(derau)).toBeGreaterThan(0.9);
+    expect(hitungZcr(nada)).toBeLessThan(0.02);
+    const p = new PenentuSuara();
+    p.aturKebisingan(0.004);
+    expect(p.napas(0.02, hitungZcr(derau), 0)).toBe(true);
+    expect(p.napas(0.02, hitungZcr(nada), 1000)).toBe(false);
+    expect(p.napas(0.003, hitungZcr(derau), 2000)).toBe(false); // terlalu pelan, hanya kebisingan
   });
 });

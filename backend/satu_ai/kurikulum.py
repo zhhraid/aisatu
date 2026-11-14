@@ -7,7 +7,10 @@ Bank kata adalah usulan; cocokkan dengan buku guru sebelum dipakai.
 from dataclasses import dataclass
 
 # "M" = bibir mengatup (m, b, p).
-BUNYI: tuple[str, ...] = ("a", "i", "u", "o", "M")
+# Bentuk yang dinilai. "M" = bibir menutup (m, b, p), "F" = gigi dan bibir (f, v),
+# "H" = hembusan napas (h, dinilai dari mikrofon). w dinilai sebagai "u", y sebagai "i".
+# Huruf lain (c d g j k l n q r s t x z) dibentuk lidah dan tidak terlihat di bibir.
+BUNYI: tuple[str, ...] = ("a", "i", "u", "o", "M", "e", "F", "H")
 TINGKAT: tuple[int, ...] = (1, 2, 3, 4)
 
 NAMA_TINGKAT = {
@@ -43,20 +46,22 @@ AMBANG_SUDAH_BISA = 0.85
 AMBANG_HAMPIR_BISA = 0.50
 PARUH_LUPA_HARI = 30.0  # asumsi: tanpa latihan, separuh kemajuan hilang dalam sebulan
 
-_VOKAL = {"a", "i", "u", "o"}
-_BILABIAL = {"m", "b", "p"}
+_BENTUK_HURUF = {
+    "a": "a", "i": "i", "u": "u", "e": "e", "o": "o",
+    "m": "M", "b": "M", "p": "M",
+    "f": "F", "v": "F",
+    "w": "u", "y": "i",
+    "h": "H",
+}
 
 
 def urutan_dari_teks(teks: str) -> tuple[str, ...]:
-    """Urutan bentuk bibir yang terlihat. Konsonan selain m/b/p dilewati,
+    """Urutan bentuk yang bisa dinilai. Huruf yang dibentuk lidah dilewati,
     dan dua bentuk sama yang berurutan digabung."""
     hasil: list[str] = []
     for huruf in teks.lower():
-        if huruf in _VOKAL:
-            bentuk = huruf
-        elif huruf in _BILABIAL:
-            bentuk = "M"
-        else:
+        bentuk = _BENTUK_HURUF.get(huruf)
+        if bentuk is None:
             continue
         if not hasil or hasil[-1] != bentuk:
             hasil.append(bentuk)
@@ -85,16 +90,23 @@ class Item:
         }
 
 
-SUKU_KATA = ("ma", "mi", "mu", "mo", "ba", "bi", "bu", "bo", "pa", "pi", "pu", "po")
-
-# Tanpa huruf e, karena é dan ê tidak dinilai.
-BANK_KATA = (
-    "mama", "papa", "bola", "buku", "baju", "mata", "pipi", "bibi",
-    "bumi", "pita", "palu", "mobil", "ibu", "api", "ubi", "topi",
-    "sapu", "kaki", "kuda", "roti", "dadu", "susu", "gigi", "oma",
+SUKU_KATA = (
+    "ma", "mi", "mu", "mo", "ba", "bi", "bu", "bo", "pa", "pi", "pu", "po",
+    "me", "be", "pe", "fa", "fi", "fu", "va", "wa", "ya", "ha", "hi", "hu", "ho",
 )
 
-_TEKS_BUNYI = {"a": "a", "i": "i", "u": "u", "o": "o", "M": "m"}
+BANK_KATA = (
+    # Level 4 rancangan tim: kata 2 suku tanpa h.
+    "mama", "mami", "oma", "ayam", "imam", "umum", "maaf", "mau", "ayo",
+    # Level 5 rancangan tim: kata dengan h.
+    "hiu", "hama", "hawa", "ayah", "wahyu",
+    # Kata lain dari usulan awal (cocokkan dengan buku guru).
+    "papa", "bola", "buku", "baju", "mata", "pipi", "bibi",
+    "bumi", "pita", "palu", "mobil", "ibu", "api", "ubi", "topi",
+    "sapu", "kaki", "kuda", "roti", "dadu", "susu", "gigi", "meja",
+)
+
+_TEKS_BUNYI = {"a": "a", "i": "i", "u": "u", "o": "o", "M": "m", "e": "e", "F": "f", "H": "h"}
 
 
 def _buat_item() -> tuple[Item, ...]:

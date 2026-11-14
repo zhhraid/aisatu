@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from satu_ai import bkt, otak
-from satu_ai.kurikulum import ITEM, ITEM_PER_ID, PARAM, PARUH_LUPA_HARI, urutan_dari_teks
+from satu_ai.kurikulum import BUNYI, ITEM, ITEM_PER_ID, PARAM, PARUH_LUPA_HARI, urutan_dari_teks
 
 T0 = datetime(2026, 11, 14, 10, 0, tzinfo=timezone.utc)
 
@@ -50,6 +50,13 @@ def test_luruh_setengah_selisih_setelah_satu_paruh():
         ("ibu", ("i", "M", "u")),
         ("susu", ("u",)),
         ("mobil", ("M", "o", "M", "i")),
+        # Bentuk baru: e, f/v, h, dan w/y yang dinilai sebagai u/i.
+        ("meja", ("M", "e", "a")),
+        ("maaf", ("M", "a", "F")),
+        ("wahyu", ("u", "a", "H", "i", "u")),
+        ("ayah", ("a", "i", "a", "H")),
+        ("hiu", ("H", "i", "u")),
+        ("ayo", ("a", "i", "o")),
     ],
 )
 def test_urutan_bentuk(teks, urutan):
@@ -228,7 +235,7 @@ def test_tidak_kembali_ke_tingkat_bawah_setelah_naik():
 
 def test_tanpa_kandidat_tidak_melompat_ke_tingkat_yang_belum_terbuka():
     s = otak.StatusAnak()
-    for b in ("a", "i", "u", "o", "M"):
+    for b in BUNYI:
         s.kc[(b, 1)] = otak.KC(p=0.99, n=5, terakhir=T0, tuntas=True)
         s.kc[(b, 2)] = otak.KC(p=0.99, n=5, terakhir=T0, tuntas=True)
     for it in ITEM:
@@ -351,3 +358,13 @@ def test_latihan_pagi_wib_tercatat_di_tanggal_wib():
     pagi_wib = datetime(2026, 11, 14, 23, 30, tzinfo=timezone.utc)  # 15 Nov 06.30 WIB
     catat(s, "t1-a", True, waktu=pagi_wib)
     assert s.hari_latihan == ["2026-11-15"]
+
+
+def test_kata_dengan_h_baru_terbuka_setelah_h_dilatih_di_suku_kata():
+    hiu = ITEM_PER_ID["t4-hiu"]
+    s = otak.StatusAnak()
+    for b in ("i", "u"):
+        s.kc[(b, 3)] = otak.KC(p=0.9, n=5, terakhir=T0)
+    assert not otak.prasyarat_terpenuhi(s, hiu, T0)  # h belum dilatih
+    s.kc[("H", 3)] = otak.KC(p=0.9, n=5, terakhir=T0)
+    assert otak.prasyarat_terpenuhi(s, hiu, T0)

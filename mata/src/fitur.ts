@@ -86,5 +86,6 @@ export function hitungFitur(kini: Blendshape, netral: Blendshape, celah: number)
       d('mouthRollUpper'),
     ),
     celah,
+    gulung: d('mouthRollLower') - d('mouthRollUpper'),
   };
 }
