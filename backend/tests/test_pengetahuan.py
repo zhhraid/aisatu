@@ -325,3 +325,20 @@ def test_endpoint_level_riwayat_dan_tanya(monkeypatch):
     assert "u" in jawab["data"]["perlu_perhatian"]
     tolak = k.post("/ai/anak/sinta/tanya", json={"nama": "Sinta", "pertanyaan": "x", "pembaca": "guru"})
     assert tolak.status_code == 422  # pertanyaan terlalu pendek
+
+
+def test_model_bibir_disimpan_dan_dimuat_per_anak(monkeypatch):
+    app = FastAPI()
+    app.include_router(buat_router(demo=True))
+    k = TestClient(app)
+    assert k.get("/ai/anak/sinta/model-bibir").json() == {"model": None}
+    model = {"versi": 1, "kelas": ["a", "u"], "pusat": [[0.3, 0, 0, 0, 0.5, 0], [0.03, 0.4, 0, 0, 0.1, 0]],
+             "skala": [0.05] * 6, "jumlah": [30, 30], "akurasi": 0.93}
+    assert k.put("/ai/anak/sinta/model-bibir", json={"model": model}).json() == {"tersimpan": True, "kelas": ["a", "u"]}
+    assert k.get("/ai/anak/sinta/model-bibir").json()["model"] == model
+    # Model rusak atau kelas asing ditolak.
+    assert k.put("/ai/anak/sinta/model-bibir", json={"model": {**model, "kelas": ["a", "zz"]}}).status_code == 422
+    assert k.put("/ai/anak/sinta/model-bibir", json={"model": {**model, "skala": [0.05] * 3}}).status_code == 422
+    assert k.put("/ai/anak/sinta/model-bibir", json={"model": {**model, "versi": 2}}).status_code == 422
+    # Menyimpan model tidak mengubah penguasaan anak.
+    assert k.get("/ai/anak/sinta/peta").json()["hari_latihan_minggu_ini"] == 0

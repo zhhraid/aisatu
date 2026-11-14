@@ -75,6 +75,7 @@ class StatusAnak:
     # Riwayat per tanggal WIB: {"percobaan", "berhasil", "kc": {"bunyi:tingkat": p terakhir hari itu}}
     riwayat: dict[str, dict] = field(default_factory=dict)
     tadi_penguatan: bool = False  # latihan terakhir adalah item yang sudah dikuasai
+    model_bibir: dict | None = None  # model bibir personal dari Mata (nearest centroid)
 
     def ambil(self, bunyi: str, tingkat: int) -> KC:
         kunci = (bunyi, tingkat)
@@ -107,6 +108,7 @@ class StatusAnak:
             "sintetis": self.sintetis,
             "riwayat": self.riwayat,
             "tadi_penguatan": self.tadi_penguatan,
+            "model_bibir": self.model_bibir,
         }
 
     @classmethod
@@ -134,6 +136,7 @@ class StatusAnak:
         status.sintetis = d.get("sintetis", False)
         status.riwayat = {t: {**r, "kc": dict(r.get("kc", {}))} for t, r in d.get("riwayat", {}).items()}
         status.tadi_penguatan = d.get("tadi_penguatan", False)
+        status.model_bibir = d.get("model_bibir")
         return status
 
 

@@ -6,3 +6,5 @@ export * from './percobaan';
 export * from './suara';
 export * from './mata';
 export * from './tutorial';
+export * from './model';
+export * from './evaluasi';

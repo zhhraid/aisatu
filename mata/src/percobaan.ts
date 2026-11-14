@@ -1,4 +1,5 @@
-import { AMBANG_BAWAAN, kemiripan, nilaiBentuk, type Ambang, type Petunjuk } from './aturan';
+import { AMBANG_BAWAAN, kemiripan, nilaiBentuk, type Ambang, type Penilaian, type Petunjuk } from './aturan';
+import { prediksi, type ModelBibir } from './model';
 import type { Bunyi, Fitur } from './tipe';
 
 export interface OpsiPercobaan {
@@ -16,7 +17,20 @@ export interface OpsiPercobaan {
   maksDtMs: number;
   /** Abaikan syarat suara (untuk menguji bentuk bibir saja). */
   tanpaSuara: boolean;
+  /**
+   * Model bibir personal anak ini. Kalau ada, bentuk bibir dinilai oleh model, bukan
+   * aturan ambang (kecuali bibir rapat di dalam kata, dan bunyi yang tidak dilatih model).
+   */
+  model: ModelBibir | null;
 }
+
+/** Peluang minimal dari model supaya bentuk dianggap benar. */
+export const PELUANG_MODEL_MIN = 0.6;
+
+const PETUNJUK_BAWAAN: Partial<Record<Bunyi, Petunjuk>> = {
+  a: 'buka_lebar', i: 'tarik_samping', u: 'kerucutkan', o: 'bulatkan',
+  M: 'rapatkan', e: 'buka_sedikit', F: 'gigi_ke_bibir',
+};
 
 export const OPSI_PERCOBAAN: OpsiPercobaan = {
   tahanTunggalMs: 700,
@@ -26,6 +40,7 @@ export const OPSI_PERCOBAAN: OpsiPercobaan = {
   batasMs: 6000,
   maksDtMs: 200,
   tanpaSuara: false,
+  model: null,
 };
 
 export interface FramePercobaan {
@@ -125,6 +140,25 @@ export class Percobaan {
     };
   }
 
+  /** Penilaian bentuk dan kemiripan: dari model personal kalau tersedia, kalau tidak dari aturan. */
+  private nilai(target: Bunyi, f: Fitur): { bentuk: Penilaian; mirip: number } {
+    const dalamKata = !this.tunggal;
+    const model = this.opsi.model;
+    const pakaiModel = model && model.kelas.includes(target) && !(target === 'M' && dalamKata);
+    if (!pakaiModel) {
+      return { bentuk: nilaiBentuk(target, f, this.ambang, dalamKata), mirip: kemiripan(target, f, this.ambang, dalamKata) };
+    }
+    const tebak = prediksi(model, f);
+    const peluang = tebak.bunyi === null ? 0 : (tebak.peluang[target] ?? 0);
+    const cocok = tebak.bunyi === target && peluang >= PELUANG_MODEL_MIN;
+    if (cocok) return { bentuk: { cocok: true, petunjuk: null }, mirip: 1 };
+    const aturan = nilaiBentuk(target, f, this.ambang, dalamKata);
+    return {
+      bentuk: { cocok: false, petunjuk: aturan.petunjuk ?? PETUNJUK_BAWAAN[target] ?? null },
+      mirip: Math.min(peluang, 0.95),
+    };
+  }
+
   proses(frame: FramePercobaan): Keadaan {
     if (this.status === 'berhasil' || this.status === 'gagal') {
       return this.keadaan(false, frame.suara, null);
@@ -144,8 +178,8 @@ export class Percobaan {
     this.aktifMs += dt;
 
     const target = this.urutan[this.langkah] as Bunyi;
-    const bentuk = nilaiBentuk(target, frame.fitur, this.ambang, !this.tunggal);
-    this.kemiripanTerakhir = kemiripan(target, frame.fitur, this.ambang, !this.tunggal);
+    const { bentuk, mirip } = this.nilai(target, frame.fitur);
+    this.kemiripanTerakhir = mirip;
     this.jumlahKemiripan += this.kemiripanTerakhir * dt;
     const suara = frame.suara || this.opsi.tanpaSuara;
     const napas = frame.napas || this.opsi.tanpaSuara;

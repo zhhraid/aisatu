@@ -2,6 +2,7 @@ import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import { AMBANG_BAWAAN, type Ambang } from './aturan';
 import { ambilBlendshape, celahBibir, hitungFitur, posisiWajah } from './fitur';
 import { Kalibrasi, type HasilKalibrasi } from './kalibrasi';
+import type { ModelBibir } from './model';
 import { Percobaan, type HasilPercobaan, type Keadaan, type OpsiPercobaan } from './percobaan';
 import { DeteksiSuara, KENDALA_MIKROFON } from './suara';
 import type { Blendshape, Bunyi, Fitur, PosisiWajah } from './tipe';
@@ -52,6 +53,8 @@ export class Mata {
   private video: HTMLVideoElement | null = null;
   private aliran: MediaStream | null = null;
   private netral: Blendshape = {};
+  /** Model bibir personal anak (dari Setel otomatis), atau null untuk memakai aturan ambang. */
+  model: ModelBibir | null = null;
   private blendTerakhir: Blendshape | null = null;
   private putaran = 0;
   private tProses = 0;
@@ -206,7 +209,7 @@ export class Mata {
     urutan: readonly Bunyi[],
     padaKeadaan?: (keadaan: Keadaan) => void,
   ): { hasil: Promise<HasilPercobaan | null>; batal: () => void } {
-    const percobaan = new Percobaan(urutan, this.opsi.ambang, this.opsi.percobaan);
+    const percobaan = new Percobaan(urutan, this.opsi.ambang, { ...this.opsi.percobaan, model: this.model });
     let batal = (): void => {};
     const hasil = new Promise<HasilPercobaan | null>((selesai) => {
       const lepas = this.padaFrame((frame) => {

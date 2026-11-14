@@ -105,12 +105,33 @@
         </div>
         <div class="besar" id="arahanSetel"></div>
         <div id="statusSetel"></div>
+        <div id="statusModel" style="margin-top: 6px"></div>
+        <label class="baris" style="margin-top: 6px"><input id="pakaiModel" type="checkbox" disabled /> Pakai model personal (bukan aturan ambang)</label>
         <p style="margin-top: 10px">Atau ubah angkanya sendiri, tekan Terapkan, lalu coba lagi. Salin hasil akhirnya ke <code>src/aturan.ts</code>.</p>
         <textarea id="ambang" spellcheck="false"></textarea>
         <div class="baris" style="margin-top: 8px">
           <button id="terapkanAmbang">Terapkan</button>
           <button id="salinAmbang">Salin</button>
           <span id="statusAmbang"></span>
+        </div>
+      </section>
+
+      <section>
+        <h2>8. Uji akurasi</h2>
+        <p>Pilih bentuk, tekan Rekam, lalu buat bentuk itu selama 2 detik. Tiap rekaman dicatat sebagai tebakan aturan dan tebakan model personal, untuk angka di slide.</p>
+        <div class="baris">
+          <select id="targetUji" aria-label="Bentuk yang diuji"></select>
+          <button id="tombolRekam" class="utama" disabled>Rekam</button>
+        </div>
+        <div class="besar" id="arahanUji"></div>
+        <div id="ringkasUji"></div>
+        <h2 style="margin-top: 10px">Aturan</h2>
+        <pre id="tabelAturan" style="font: 12px ui-monospace, monospace; overflow-x: auto"></pre>
+        <h2>Model personal</h2>
+        <pre id="tabelModel" style="font: 12px ui-monospace, monospace; overflow-x: auto"></pre>
+        <div class="baris">
+          <button id="salinAkurasi">Salin tabel</button>
+          <button id="kosongAkurasi">Kosongkan</button>
         </div>
       </section>
 
@@ -133,6 +154,7 @@
         </div>
         <div class="baris">
           <button id="tombolSesi">Mulai sesi</button>
+          <button id="simpanModel" disabled>Simpan model ke Otak</button>
           <span id="statusOtak"></span>
         </div>
         <div id="pilihanOtak"></div>

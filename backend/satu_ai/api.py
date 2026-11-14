@@ -53,6 +53,21 @@ class MasukanTanya(BaseModel):
     pembaca: Literal["guru", "orang_tua"] = "orang_tua"
 
 
+class ModelBibir(BaseModel):
+    """Model bibir personal dari Mata: titik tengah tiap bentuk dan skala tiap ciri."""
+
+    versi: Literal[1]
+    kelas: list[str] = Field(min_length=2, max_length=10)
+    pusat: list[list[float]] = Field(min_length=2, max_length=10)
+    skala: list[float] = Field(min_length=1, max_length=12)
+    jumlah: list[int] = Field(default_factory=list, max_length=10)
+    akurasi: float | None = Field(default=None, ge=0, le=1)  # validasi silang saat dilatih
+
+
+class MasukanModel(BaseModel):
+    model: ModelBibir
+
+
 class MasukanKelas(BaseModel):
     anak: list[AnakKelas]
 
@@ -193,6 +208,23 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
         dilatih = [d["bunyi"] for d in data["sedang_dilatih"]]
         rujukan = pengetahuan.muat().cari(dilatih, "orang_tua", k=3)
         return await mulut.laporan_mingguan(data, masukan.nama, rujukan=rujukan)
+
+    @router.get("/anak/{anak_id}/model-bibir")
+    def ambil_model(anak_id: str) -> dict:
+        """Model bibir personal anak ini, atau null kalau belum pernah dilatih."""
+        return {"model": simpanan.muat(anak_id).model_bibir}
+
+    @router.put("/anak/{anak_id}/model-bibir")
+    def simpan_model(anak_id: str, masukan: MasukanModel) -> dict:
+        m = masukan.model
+        if any(b not in BUNYI for b in m.kelas) or len(m.kelas) != len(m.pusat):
+            raise HTTPException(422, "Kelas model tidak dikenal atau tidak sesuai jumlah pusat")
+        if any(len(p) != len(m.skala) for p in m.pusat):
+            raise HTTPException(422, "Ukuran pusat tidak sesuai skala")
+        status = simpanan.muat(anak_id)
+        status.model_bibir = m.model_dump()
+        simpanan.simpan(anak_id, status)
+        return {"tersimpan": True, "kelas": m.kelas}
 
     @router.get("/anak/{anak_id}/level")
     def level(anak_id: str) -> dict:

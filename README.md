@@ -14,8 +14,8 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 
 Sudah diuji:
 
-- Backend: 131 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
-- Mata: 53 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
+- Backend: 132 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
+- Mata: 63 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
 Belum diuji, dan harus kalian lakukan:
@@ -93,6 +93,7 @@ Semua di bawah `/ai`. Belum ada login; tambahkan saat router dipasang ke aplikas
 | `GET /ai/anak/{id}/level` | web siswa | Peta petualangan: 6 level dengan kemajuan, bintang, dan status (terkunci, terbuka, tuntas) |
 | `GET /ai/anak/{id}/riwayat` | mobile guru | Perkembangan harian dan kemajuan tiap bunyi dari waktu ke waktu, untuk grafik |
 | `POST /ai/anak/{id}/tanya` | mobile guru, web orang tua | Agent tanya progres: `{"nama", "pertanyaan", "pembaca": "guru" atau "orang_tua"}`, dijawab dari data anak dan rujukan |
+| `GET` / `PUT /ai/anak/{id}/model-bibir` | web siswa | Model bibir personal anak (dilatih di Mata), disimpan dan dimuat per anak |
 | `POST /ai/demo/isi` | demo | Mengisi satu anak dengan data buatan (hanya saat `SATU_DEMO=1`) |
 
 Kirim hasil percobaan:
@@ -244,6 +245,19 @@ if (akhir) await kirim({ item_id: item.id, ...akhir });
 **Otak.** Satu angka penguasaan per bunyi × tingkat (5 × 4). Penguasaan sebuah kata = bunyi terlemahnya. Latihan berikutnya adalah yang perkiraan berhasilnya paling dekat ke 78%, dengan pengaman dari 10 percobaan terakhir. Parameter BKT bukan hasil fit data: dipilih lewat simulasi supaya anak yang berhasil 50% percobaan jarang dicap "sudah bisa" (sekitar 15% waktu) dan anak yang berhasil 80% hampir selalu (sekitar 97%).
 
 **Mulut.** LLM tidak memilih latihan dan tidak menulis angka. Keluarannya ditolak kalau JSON rusak, memuat angka, terlalu panjang, mengubah daftar kata, atau menyebut kata latihan lain; lalu dipakai templat.
+
+### Model bibir personal
+
+`mata/src/model.ts` adalah model ML yang **dilatih dari wajah tiap anak**: classifier nearest centroid atas enam ciri bibir (rahang, bulat, lebar, tekan, celah, gulung), dilatih dari sekitar 2 detik contoh per bentuk saat **Setel otomatis**. Pelatihannya berjalan di browser dalam milidetik, dan akurasinya langsung diukur dengan validasi silang leave-one-out dari contoh yang sama.
+
+- Kalau akurasi validasi minimal 80% (`layakDipakai`), model menggantikan aturan ambang untuk tujuh bentuk bibir. Kalau tidak, aturan tetap dipakai dan penguji diminta mengulang.
+- Bibir rapat di dalam kata ("bu", "mo") dan bunyi yang dinilai dari mikrofon (h, desis, huruf lidah) tetap memakai aturan.
+- Model disimpan per anak lewat `PUT /ai/anak/{id}/model-bibir`, lalu dimuat lagi di sesi berikutnya.
+- Di aplikasi: `mata.model = layakDipakai(model) ? model : null`.
+
+### Uji akurasi
+
+Kartu **8. Uji akurasi** di halaman uji: pilih bentuk, tekan **Rekam**, buat bentuk itu 2 detik. Tiap rekaman dicatat sebagai tebakan aturan dan tebakan model personal (suara terbanyak dari tiap frame), lalu ditampilkan sebagai akurasi dan tabel kebingungan yang bisa disalin ke slide.
 
 ### Tutorial bibir a-z
 

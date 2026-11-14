@@ -5,6 +5,9 @@ import {
 import { Mata, type FrameMata } from './mata';
 import type { HasilPercobaan, Keadaan } from './percobaan';
 import { ABJAD, gambarBibir, koordinatBentuk } from './tutorial';
+import { AKURASI_MODEL_MIN, bacaModel, latihDanValidasi, layakDipakai, prediksi, type ModelBibir } from './model';
+import { MatriksKebingungan, tebakAturan, tebakanTerbanyak, tebakModel } from './evaluasi';
+import { PELUANG_MODEL_MIN } from './percobaan';
 import { BENTUK_BIBIR, SEMUA_BUNYI, type Bunyi, type Fitur } from './tipe';
 
 const el = <T extends HTMLElement>(id: string): T => {
@@ -79,7 +82,13 @@ function tampilkanFrame(frame: FrameMata): void {
     // "h" dan desis menyala hanya kalau ada hembusan; huruf lidah kalau ada bunyi apa pun.
     const bunyiOk =
       bunyi === 'H' || bunyi === 'S' ? frame.napas : bunyi === 'T' ? frame.suara || frame.napas : true;
-    const cocok = frame.fitur !== null && nilaiBentuk(bunyi, frame.fitur, mata?.ambang).cocok && bunyiOk;
+    let cocokBentuk = frame.fitur !== null && nilaiBentuk(bunyi, frame.fitur, mata?.ambang).cocok;
+    const model = mata?.model;
+    if (frame.fitur && model?.kelas.includes(bunyi)) {
+      const t = prediksi(model, frame.fitur);
+      cocokBentuk = t.bunyi === bunyi && (t.peluang[bunyi] ?? 0) >= PELUANG_MODEL_MIN;
+    }
+    const cocok = cocokBentuk && bunyiOk;
     span.classList.toggle('nyala', cocok);
   }
   for (const nama of NAMA_FITUR) {
@@ -130,6 +139,7 @@ tombol('tombolKamera').addEventListener('click', async () => {
     tombol('tombolKalibrasi').disabled = false;
     tombol('tombolCoba').disabled = false;
     tombol('tombolSetel').disabled = false;
+    tombol('tombolRekam').disabled = false;
     el('statusKalibrasi').textContent = 'Belum dikalibrasi: angka di samping masih mentah.';
     t.textContent = 'Kamera aktif';
     document.body.dataset['siap'] = '1';
@@ -238,10 +248,10 @@ function pakaiPilihan(pilihan: PilihanOtak): void {
     (pilihan.istirahat ? '. Waktunya istirahat sebentar.' : '.');
 }
 
-async function panggilOtak(jalur: string, badan?: object): Promise<Record<string, unknown>> {
+async function panggilOtak(jalur: string, badan?: object, metode = 'POST'): Promise<Record<string, unknown>> {
   const alamat = masukan('alamat').value.replace(/\/$/, '');
   const jawab = await fetch(`${alamat}/ai/anak/${encodeURIComponent(masukan('anak').value)}/${jalur}`, {
-    method: 'POST',
+    method: metode,
     headers: { 'Content-Type': 'application/json' },
     body: badan ? JSON.stringify(badan) : undefined,
   });
@@ -269,9 +279,27 @@ tombol('tombolSesi').addEventListener('click', async () => {
     status.className = 'baik';
     status.textContent = 'Tersambung.';
     pakaiPilihan(jawab['berikutnya'] as PilihanOtak);
+    // Model personal anak ini, kalau pernah disimpan.
+    const tersimpan = bacaModel((await panggilOtak('model-bibir', undefined, 'GET'))['model']);
+    if (tersimpan && mata) {
+      pasangModel(tersimpan, 'Model personal anak ini dimuat dari Otak.');
+    }
   } catch (galat) {
     status.className = 'buruk';
     status.textContent = `Tidak tersambung: ${(galat as Error).message}`;
+  }
+});
+
+tombol('simpanModel').addEventListener('click', async () => {
+  const status = el('statusOtak');
+  if (!mata?.model) return;
+  try {
+    await panggilOtak('model-bibir', { model: mata.model }, 'PUT');
+    status.className = 'baik';
+    status.textContent = 'Model personal tersimpan untuk anak ini.';
+  } catch (galat) {
+    status.className = 'buruk';
+    status.textContent = `Model tidak tersimpan: ${(galat as Error).message}`;
   }
 });
 
@@ -340,6 +368,7 @@ tombol('tombolSetel').addEventListener('click', async () => {
   }
   tombol('tombolSetel').disabled = true;
   const contoh = {} as Record<BentukBibir, Fitur>;
+  const contohFrame = {} as Record<BentukBibir, Fitur[]>;
   try {
     for (const bunyi of BENTUK_BIBIR as BentukBibir[]) {
       pilihHuruf(bunyi === 'M' ? 'm' : bunyi === 'F' ? 'f' : bunyi);
@@ -351,8 +380,10 @@ tombol('tombolSetel').addEventListener('click', async () => {
       const frame = await kumpulkanBentuk(2000);
       if (frame.length < 5) throw new Error(`Wajah tidak terlihat saat bentuk ${bunyi}. Ulangi.`);
       contoh[bunyi] = medianFitur(frame);
+      contohFrame[bunyi] = frame;
     }
     arahan.textContent = '';
+    latihModelPersonal(contohFrame);
     const hasil = setelOtomatis(contoh);
     if (!hasil.ok) {
       status.className = 'buruk';
@@ -373,3 +404,104 @@ tombol('tombolSetel').addEventListener('click', async () => {
     tombol('tombolSetel').disabled = false;
   }
 });
+
+// ------------------------------------------------------------ model personal
+
+function pasangModel(model: ModelBibir, pesan: string): void {
+  if (!mata) return;
+  modelTerlatih = model;
+  const layak = layakDipakai(model);
+  // Model yang kurang akurat tidak dipakai otomatis; aturan ambang tetap jadi penilai.
+  mata.model = layak ? model : null;
+  masukan('pakaiModel').disabled = false;
+  masukan('pakaiModel').checked = layak;
+  tombol('simpanModel').disabled = !layak;
+  const st = el('statusModel');
+  st.className = layak ? 'baik' : 'peringatan';
+  st.textContent = layak
+    ? pesan
+    : `${pesan} Belum cukup akurat (minimal ${Math.round(AKURASI_MODEL_MIN * 100)}%), jadi penilaian tetap ` +
+      'memakai aturan. Ulangi Setel otomatis dengan tiap bentuk dibuat lebih jelas.';
+}
+
+let modelTerlatih: ModelBibir | null = null;
+
+function latihModelPersonal(contohFrame: Record<BentukBibir, Fitur[]>): void {
+  const st = el('statusModel');
+  try {
+    const { model, validasi: v } = latihDanValidasi(contohFrame);
+    const per = (Object.entries(v.perKelas) as [Bunyi, number][])
+      .map(([b, a]) => `${b} ${Math.round(a * 100)}%`)
+      .join(', ');
+    pasangModel(
+      model,
+      `Model personal dilatih dari ${v.jumlah} contoh wajahmu. Akurasi validasi silang: ` +
+        `${Math.round(v.akurasi * 100)}% (${per}).`,
+    );
+    document.body.dataset['model'] = String(Math.round(v.akurasi * 100));
+  } catch (galat) {
+    st.className = 'buruk';
+    st.textContent = `Model personal belum bisa dilatih: ${(galat as Error).message}`;
+  }
+}
+
+masukan('pakaiModel').addEventListener('change', () => {
+  if (mata) mata.model = masukan('pakaiModel').checked ? modelTerlatih : null;
+});
+
+// --------------------------------------------------------------- uji akurasi
+
+const matriksAturan = new MatriksKebingungan();
+const matriksModel = new MatriksKebingungan();
+const pilihTarget = el<HTMLSelectElement>('targetUji');
+for (const b of BENTUK_BIBIR as BentukBibir[]) {
+  const pilihan = document.createElement('option');
+  pilihan.value = b;
+  pilihan.textContent = NAMA_BENTUK[b];
+  pilihTarget.append(pilihan);
+}
+
+function tampilkanAkurasi(): void {
+  const persen = (x: number | null) => (x === null ? '-' : `${Math.round(x * 100)}%`);
+  el('ringkasUji').textContent =
+    `${matriksAturan.jumlah} rekaman. Akurasi aturan: ${persen(matriksAturan.akurasi())}. ` +
+    `Akurasi model personal: ${modelTerlatih ? persen(matriksModel.akurasi()) : 'belum ada model'}.`;
+  el('tabelAturan').textContent = matriksAturan.jumlah ? matriksAturan.keTsv() : '';
+  el('tabelModel').textContent = matriksModel.jumlah ? matriksModel.keTsv() : '';
+}
+
+tombol('tombolRekam').addEventListener('click', async () => {
+  if (!mata) return;
+  const target = pilihTarget.value as BentukBibir;
+  tombol('tombolRekam').disabled = true;
+  const arahan = el('arahanUji');
+  try {
+    for (let hitung = 3; hitung > 0; hitung--) {
+      arahan.textContent = `Siap-siap: ${NAMA_BENTUK[target]} (${hitung})`;
+      await tunggu(500);
+    }
+    arahan.textContent = `Tahan ${NAMA_BENTUK[target]}...`;
+    const frame = await kumpulkanBentuk(2000);
+    if (frame.length < 5) throw new Error('Wajah tidak terlihat. Ulangi.');
+    matriksAturan.tambah(target, tebakanTerbanyak(frame.map((f) => tebakAturan(f, mata!.ambang))));
+    if (modelTerlatih) matriksModel.tambah(target, tebakanTerbanyak(frame.map((f) => tebakModel(f, modelTerlatih!))));
+    arahan.textContent = '';
+    tampilkanAkurasi();
+  } catch (galat) {
+    arahan.textContent = (galat as Error).message;
+  } finally {
+    tombol('tombolRekam').disabled = false;
+  }
+});
+
+tombol('salinAkurasi').addEventListener('click', () =>
+  navigator.clipboard.writeText(
+    `${el('ringkasUji').textContent}\n\nAturan\n${matriksAturan.keTsv()}\n\nModel personal\n${matriksModel.keTsv()}`,
+  ),
+);
+tombol('kosongAkurasi').addEventListener('click', () => {
+  matriksAturan.kosongkan();
+  matriksModel.kosongkan();
+  tampilkanAkurasi();
+});
+tampilkanAkurasi();
