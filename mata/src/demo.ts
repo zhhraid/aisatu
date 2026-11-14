@@ -76,11 +76,10 @@ function tampilkanFrame(frame: FrameMata): void {
   tTampil = frame.t;
   el('statusKamera').textContent = `${TEKS_POSISI[frame.posisi]} · ${fps.toFixed(0)} frame per detik`;
   for (const [bunyi, span] of keping) {
-    // "h" menyala hanya kalau ada hembusan napas, bukan dari bentuk bibir saja.
-    const cocok =
-      frame.fitur !== null &&
-      nilaiBentuk(bunyi, frame.fitur, mata?.ambang).cocok &&
-      (bunyi !== 'H' || frame.napas);
+    // "h" dan desis menyala hanya kalau ada hembusan; huruf lidah kalau ada bunyi apa pun.
+    const bunyiOk =
+      bunyi === 'H' || bunyi === 'S' ? frame.napas : bunyi === 'T' ? frame.suara || frame.napas : true;
+    const cocok = frame.fitur !== null && nilaiBentuk(bunyi, frame.fitur, mata?.ambang).cocok && bunyiOk;
     span.classList.toggle('nyala', cocok);
   }
   for (const nama of NAMA_FITUR) {
@@ -113,6 +112,7 @@ function tampilkanKeadaan(k: Keadaan): void {
   if (k.status === 'jeda') petunjuk.textContent = 'Jeda: wajah tidak terlihat';
   else if (k.petunjuk === 'bersuara') petunjuk.textContent = 'Bentuk sudah benar, sekarang bersuara';
   else if (k.petunjuk === 'hembuskan') petunjuk.textContent = 'Hembuskan napas (seperti meniup tisu)';
+  else if (k.petunjuk === 'desiskan') petunjuk.textContent = 'Desiskan udara lewat gigi (sss)';
   else if (k.petunjuk) petunjuk.textContent = TEKS_PETUNJUK[k.petunjuk];
   else petunjuk.textContent = k.status === 'berjalan' ? 'Tahan...' : '';
 }
@@ -287,9 +287,11 @@ function pilihHuruf(huruf: string): void {
   if (ctx) gambarBibir(ctx, koordinatBentuk(data.bentuk));
   el('hurufTutorial').textContent = data.huruf.toUpperCase();
   el('petunjukTutorial').textContent = data.petunjuk;
-  el('dinilaiTutorial').textContent = data.dinilai
-    ? 'Dinilai kamera.'
-    : 'Hanya contoh: kamera tidak bisa menilai huruf ini.';
+  el('dinilaiTutorial').textContent = !data.dinilai
+    ? 'Hanya contoh: kamera tidak bisa menilai huruf ini.'
+    : data.sebagian
+      ? 'Dinilai sebagian: posisi mulut dan suaranya, bukan lidah. Ketepatan lidah dinilai guru.'
+      : 'Dinilai kamera.';
   for (const tombolHuruf of el('abjad').querySelectorAll('button')) {
     tombolHuruf.classList.toggle('pilih', tombolHuruf.textContent === data.huruf);
   }
@@ -304,7 +306,7 @@ pilihHuruf('a');
 
 // ---------------------------------------------------------- setel otomatis
 
-type BentukBibir = Exclude<Bunyi, 'H'>;
+type BentukBibir = Exclude<Bunyi, 'H' | 'S' | 'T'>;
 const NAMA_BENTUK: Record<BentukBibir, string> = {
   a: '"aaa", mulut terbuka lebar',
   i: '"iii", bibir ditarik ke samping',

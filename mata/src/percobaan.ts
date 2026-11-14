@@ -50,7 +50,7 @@ export interface Keadaan {
   suara: boolean;
   /** 0 sampai 1, kemajuan seluruh percobaan. */
   progres: number;
-  petunjuk: Petunjuk | 'bersuara' | 'hembuskan' | null;
+  petunjuk: Petunjuk | 'bersuara' | 'hembuskan' | 'desiskan' | null;
   sisaMs: number;
   /** 0 sampai 1, kemiripan bentuk bibir frame ini dengan bentuk target (untuk bilah "Kemiripan"). */
   kemiripan: number;
@@ -104,7 +104,8 @@ export class Percobaan {
 
   private butuhTahan(target: Bunyi): number {
     if (this.tunggal) return this.opsi.tahanTunggalMs;
-    return target === 'M' ? this.opsi.tahanKatupMs : this.opsi.tahanVokalMs;
+    // Bibir rapat dan huruf lidah (t, k, d) sangat singkat di dalam kata.
+    return target === 'M' || target === 'T' ? this.opsi.tahanKatupMs : this.opsi.tahanVokalMs;
   }
 
   private keadaan(cocok: boolean, suara: boolean, petunjuk: Keadaan['petunjuk']): Keadaan {
@@ -151,9 +152,13 @@ export class Percobaan {
     // "h" dinilai dari hembusan napas, bukan suara bernada. "f" boleh bersuara (v) atau
     // berupa hembusan (f). Di dalam kata, bibir mengatup tidak perlu bersuara (b dan p
     // memang senyap sesaat).
-    const perluNapas = target === 'H';
+    // Desis (s, c, z) dikenali dari derau di mikrofon, seperti hembusan. Huruf lidah boleh
+    // bersuara (d, n, l) atau berupa letupan tanpa suara (t, k).
+    const perluNapas = target === 'H' || target === 'S';
     const perluSuara = !perluNapas && (this.tunggal || target !== 'M');
-    const bunyiOk = perluNapas ? napas : !perluSuara || suara || (target === 'F' && napas);
+    const bunyiOk = perluNapas
+      ? napas
+      : !perluSuara || suara || ((target === 'F' || target === 'T') && napas);
     const ok = bentuk.cocok && bunyiOk;
 
     if (ok) {
@@ -177,9 +182,11 @@ export class Percobaan {
       ? bentuk.petunjuk
       : bunyiOk
         ? null
-        : perluNapas
-          ? 'hembuskan'
-          : 'bersuara';
+        : target === 'S'
+          ? 'desiskan'
+          : perluNapas
+            ? 'hembuskan'
+            : 'bersuara';
     return this.keadaan(bentuk.cocok, suara, petunjuk);
   }
 

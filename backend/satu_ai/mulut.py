@@ -20,7 +20,10 @@ PemanggilLLM = Callable[[str, str], Awaitable[dict | None]]
 
 log = logging.getLogger("satu_ai.mulut")
 
-_NAMA_BUNYI = {"a": "a", "i": "i", "u": "u", "o": "o", "M": "m/b/p", "e": "e", "F": "f/v", "H": "h"}
+_NAMA_BUNYI = {
+    "a": "a", "i": "i", "u": "u", "o": "o", "M": "m/b/p", "e": "e", "F": "f/v", "H": "h",
+    "S": "desis (s/c/z/j)", "T": "lidah (t/d/n/l/r/k/g)",
+}
 _KATA_LATIHAN = set(BANK_KATA) | set(SUKU_KATA)
 _ANGKA = re.compile(r"\d")
 
@@ -350,6 +353,8 @@ _PETUNJUK_BUNYI = {
     "e": "buka mulut sedikit dengan bibir agak ke samping",
     "F": "tempelkan gigi atas ke bibir bawah lalu hembuskan udara",
     "H": "buka mulut dan hembuskan napas, rasakan dengan tisu di depan mulut",
+    "S": "rapatkan gigi, buka bibir sedikit, lalu desiskan udara",
+    "T": "buka mulut sedikit dan perhatikan posisi lidah guru",
 }
 
 

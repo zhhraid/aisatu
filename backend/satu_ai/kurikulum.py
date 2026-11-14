@@ -8,9 +8,13 @@ from dataclasses import dataclass
 
 # "M" = bibir mengatup (m, b, p).
 # Bentuk yang dinilai. "M" = bibir menutup (m, b, p), "F" = gigi dan bibir (f, v),
-# "H" = hembusan napas (h, dinilai dari mikrofon). w dinilai sebagai "u", y sebagai "i".
-# Huruf lain (c d g j k l n q r s t x z) dibentuk lidah dan tidak terlihat di bibir.
-BUNYI: tuple[str, ...] = ("a", "i", "u", "o", "M", "e", "F", "H")
+# "H" = hembusan napas (h, dari mikrofon). w dinilai sebagai "u", y sebagai "i".
+# Huruf yang dibentuk lidah dinilai SEBAGIAN (posisi mulut dan suaranya, bukan lidah):
+# "S" = desis (s, c, x, z, j), "T" = huruf lidah lain (t, d, n, l, r, k, g, q).
+BUNYI: tuple[str, ...] = ("a", "i", "u", "o", "M", "e", "F", "H", "S", "T")
+
+# Bunyi yang hanya dinilai sebagian: kamera tidak bisa melihat lidah.
+DINILAI_SEBAGIAN: frozenset[str] = frozenset({"S", "T"})
 TINGKAT: tuple[int, ...] = (1, 2, 3, 4)
 
 NAMA_TINGKAT = {
@@ -52,12 +56,14 @@ _BENTUK_HURUF = {
     "f": "F", "v": "F",
     "w": "u", "y": "i",
     "h": "H",
+    "s": "S", "c": "S", "x": "S", "z": "S", "j": "S",
+    "t": "T", "d": "T", "n": "T", "l": "T", "r": "T", "k": "T", "g": "T", "q": "T",
 }
 
 
 def urutan_dari_teks(teks: str) -> tuple[str, ...]:
-    """Urutan bentuk yang bisa dinilai. Huruf yang dibentuk lidah dilewati,
-    dan dua bentuk sama yang berurutan digabung."""
+    """Urutan bentuk yang dinilai. Dua bentuk sama yang berurutan digabung
+    (misalnya "ng" menjadi satu "T")."""
     hasil: list[str] = []
     for huruf in teks.lower():
         bentuk = _BENTUK_HURUF.get(huruf)
@@ -87,12 +93,15 @@ class Item:
             "teks": self.teks,
             "urutan": list(self.urutan),
             "bantuan_visual": self.tingkat == 1,
+            # True kalau ada bunyi lidah yang hanya dinilai sebagian (mulut dan suara).
+            "dinilai_sebagian": any(b in DINILAI_SEBAGIAN for b in self.urutan),
         }
 
 
 SUKU_KATA = (
     "ma", "mi", "mu", "mo", "ba", "bi", "bu", "bo", "pa", "pi", "pu", "po",
     "me", "be", "pe", "fa", "fi", "fu", "va", "wa", "ya", "ha", "hi", "hu", "ho",
+    "sa", "si", "su", "ca", "ja", "ta", "ti", "tu", "da", "ka", "ki", "ku", "ga", "la", "na", "ra",
 )
 
 BANK_KATA = (
@@ -106,7 +115,9 @@ BANK_KATA = (
     "sapu", "kaki", "kuda", "roti", "dadu", "susu", "gigi", "meja",
 )
 
-_TEKS_BUNYI = {"a": "a", "i": "i", "u": "u", "o": "o", "M": "m", "e": "e", "F": "f", "H": "h"}
+_TEKS_BUNYI = {
+    "a": "a", "i": "i", "u": "u", "o": "o", "M": "m", "e": "e", "F": "f", "H": "h", "S": "s", "T": "t",
+}
 
 
 def _buat_item() -> tuple[Item, ...]:

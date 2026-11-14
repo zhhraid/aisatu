@@ -152,6 +152,7 @@ def test_alur_sesi_sampai_naik_tingkat(klien):
     berikut = klien.post("/ai/anak/raka/sesi").json()["berikutnya"]
     assert berikut["item"] == {
         "id": "t1-a", "tingkat": 1, "teks": "a", "urutan": ["a"], "bantuan_visual": True,
+        "dinilai_sebagian": False,
     }
     urutan_id = []
     for _ in range(6):
@@ -220,8 +221,10 @@ def test_tugas_laporan_dan_ringkasan_tanpa_llm_memakai_templat(klien):
 
 def test_kurikulum_dan_status(klien):
     kurikulum = klien.get("/ai/kurikulum").json()
-    assert kurikulum["bunyi"] == ["a", "i", "u", "o", "M", "e", "F", "H"]
-    assert len(kurikulum["item"]) == 2 * 8 + 25 + 37  # bunyi di tingkat 1-2, suku kata, kata
+    assert kurikulum["bunyi"] == ["a", "i", "u", "o", "M", "e", "F", "H", "S", "T"]
+    assert len(kurikulum["item"]) == 2 * 10 + 41 + 37  # bunyi di tingkat 1-2, suku kata, kata
+    sebagian = {it["teks"] for it in kurikulum["item"] if it["dinilai_sebagian"]}
+    assert "bola" in sebagian and "mama" not in sebagian and "s" in sebagian
     assert klien.get("/ai/status").json() == {
         "llm_tersedia": False,
         "llm_kurang": ["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"],

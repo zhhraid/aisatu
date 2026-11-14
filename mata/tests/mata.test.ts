@@ -19,6 +19,8 @@ const BENTUK: Record<Bunyi, Fitur> = {
   e: { rahang: 0.2, bulat: 0.03, lebar: 0.2, tekan: 0, celah: 0.06 },
   F: { rahang: 0.03, bulat: 0.05, lebar: 0.05, tekan: 0.1, celah: 0.008, gulung: 0.35 },
   H: { rahang: 0.2, bulat: 0.05, lebar: 0.05, tekan: 0, celah: 0.08 },
+  S: { rahang: 0.05, bulat: 0.05, lebar: 0.2, tekan: 0, celah: 0.015 },
+  T: { rahang: 0.15, bulat: 0.05, lebar: 0.1, tekan: 0, celah: 0.05 },
 };
 
 describe('aturan bentuk bibir', () => {
@@ -61,11 +63,12 @@ describe('aturan bentuk bibir', () => {
   });
 
   it('urutan bentuk dari kata sama dengan aturan backend', () => {
-    expect(urutanDariTeks('bola')).toEqual(['M', 'o', 'a']);
+    expect(urutanDariTeks('bola')).toEqual(['M', 'o', 'T', 'a']);
     expect(urutanDariTeks('mama')).toEqual(['M', 'a', 'M', 'a']);
-    expect(urutanDariTeks('buku')).toEqual(['M', 'u']);
+    expect(urutanDariTeks('buku')).toEqual(['M', 'u', 'T', 'u']);
     expect(urutanDariTeks('ibu')).toEqual(['i', 'M', 'u']);
-    expect(urutanDariTeks('Susu')).toEqual(['u']);
+    expect(urutanDariTeks('Susu')).toEqual(['S', 'u', 'S', 'u']);
+    expect(urutanDariTeks('anggur')).toEqual(['a', 'T', 'u', 'T']); // "ngg" satu bunyi lidah
   });
 });
 
@@ -237,9 +240,10 @@ describe('percobaan', () => {
     const { hasil } = jalankan(urutanDariTeks('bola'), [
       [BENTUK.M, false, 4],
       [BENTUK.o, true, 5],
+      [BENTUK.T, true, 2],
       [BENTUK.a, true, 5],
     ]);
-    expect(hasil).toMatchObject({ berhasil: true, langkah_tercapai: 3 });
+    expect(hasil).toMatchObject({ berhasil: true, langkah_tercapai: 4 });
   });
 
   it('kata yang urutannya salah gagal di langkah yang macet', () => {
@@ -394,18 +398,24 @@ describe('tutorial bibir a-z', () => {
 
   it('hanya huruf yang punya aturan yang ditandai dinilai, dan cocok dengan urutan bentuk', () => {
     const dinilai = ABJAD.filter((h) => h.dinilai).map((h) => h.huruf).join('');
-    expect(dinilai).toBe('abefhimopuvwy');
-    for (const h of 'abefhimopuvwy') {
+    expect(dinilai).toBe('abcdefghijklmnopqrstuvwxyz');
+    for (const h of dinilai) {
       expect(urutanDariTeks(h)).toEqual([hurufTutorial(h).dinilai]);
     }
-    expect(hurufTutorial('r')).toMatchObject({ bentuk: 'lidah', dinilai: null });
+    // Huruf lidah: dinilai sebagian, dan tutorialnya jujur soal itu.
+    const sebagian = ABJAD.filter((h) => h.sebagian).map((h) => h.huruf).join('');
+    expect(sebagian).toBe('cdgjklnqrstxz');
+    expect(hurufTutorial('r')).toMatchObject({ bentuk: 'lidah', dinilai: 'T', sebagian: true });
+    expect(hurufTutorial('s')).toMatchObject({ bentuk: 'desis', dinilai: 'S', sebagian: true });
+    expect(hurufTutorial('a').sebagian).toBe(false);
+    expect(hurufTutorial('1').dinilai).toBeNull();
     expect(hurufTutorial('F')).toMatchObject({ huruf: 'f', bentuk: 'gigi_bibir' });
     expect(hurufTutorial('w')).toMatchObject({ bentuk: 'u', dinilai: 'u' });
     expect(hurufTutorial('h')).toMatchObject({ bentuk: 'hembusan', dinilai: 'H' });
   });
 });
 
-type BentukBibir = Exclude<Bunyi, 'H'>;
+type BentukBibir = Exclude<Bunyi, 'H' | 'S' | 'T'>;
 const SEMUA: BentukBibir[] = ['a', 'i', 'u', 'o', 'M', 'e', 'F'];
 
 describe('ambang dan penyetelan otomatis', () => {
@@ -486,7 +496,7 @@ describe('e, f/v, w/y, dan h', () => {
   it('w dinilai seperti u, y seperti i, h sebagai hembusan', () => {
     expect(urutanDariTeks('wahyu')).toEqual(['u', 'a', 'H', 'i', 'u']);
     expect(urutanDariTeks('maaf')).toEqual(['M', 'a', 'F']);
-    expect(urutanDariTeks('meja')).toEqual(['M', 'e', 'a']);
+    expect(urutanDariTeks('meja')).toEqual(['M', 'e', 'S', 'a']);
     expect(urutanDariTeks('hiu')).toEqual(['H', 'i', 'u']);
   });
 
@@ -533,5 +543,47 @@ describe('e, f/v, w/y, dan h', () => {
     expect(p.napas(0.02, hitungZcr(derau), 0)).toBe(true);
     expect(p.napas(0.02, hitungZcr(nada), 1000)).toBe(false);
     expect(p.napas(0.003, hitungZcr(derau), 2000)).toBe(false); // terlalu pelan, hanya kebisingan
+  });
+});
+
+describe('huruf lidah dinilai sebagian', () => {
+  function jalankanBunyi(urutan: Bunyi[], bagian: [Fitur, boolean, boolean, number][]) {
+    const p = new Percobaan(urutan, AMBANG_BAWAAN);
+    let t = 0;
+    let keadaan = null;
+    for (const [fitur, suara, napas, n] of bagian) {
+      for (let i = 0; i < n && !p.hasil(); i++, t += 50) keadaan = p.proses({ t, fitur, suara, napas });
+    }
+    return { hasil: p.hasil(), keadaan: keadaan! };
+  }
+
+  it('desis butuh gigi hampir rapat dan derau desis, bukan suara bernada', () => {
+    expect(jalankanBunyi(['S'], [[BENTUK.S, false, true, 20]]).hasil?.berhasil).toBe(true);
+    const bersuara = jalankanBunyi(['S'], [[BENTUK.S, true, false, 30]]);
+    expect(bersuara.hasil).toBeNull();
+    expect(bersuara.keadaan.petunjuk).toBe('desiskan');
+    expect(jalankanBunyi(['S'], [[BENTUK.a, false, true, 30]]).keadaan.petunjuk).toBe('gigi_rapat');
+  });
+
+  it('huruf lidah butuh mulut sedikit terbuka dan bunyi apa pun (d bersuara, t letupan)', () => {
+    expect(jalankanBunyi(['T'], [[BENTUK.T, true, false, 20]]).hasil?.berhasil).toBe(true);
+    expect(jalankanBunyi(['T'], [[BENTUK.T, false, true, 20]]).hasil?.berhasil).toBe(true);
+    expect(jalankanBunyi(['T'], [[BENTUK.T, false, false, 30]]).hasil).toBeNull();
+    expect(jalankanBunyi(['T'], [[BENTUK.M, true, false, 30]]).keadaan.petunjuk).toBe('buka_mulut');
+  });
+
+  it('kata "susu": desis, u, desis, u', () => {
+    const { hasil } = jalankanBunyi(urutanDariTeks('susu'), [
+      [BENTUK.S, false, true, 4],
+      [BENTUK.u, true, false, 4],
+      [BENTUK.S, false, true, 4],
+      [BENTUK.u, true, false, 4],
+    ]);
+    expect(hasil).toMatchObject({ berhasil: true, langkah_tercapai: 4 });
+  });
+
+  it('batasnya jujur: t dan k tidak bisa dibedakan', () => {
+    expect(urutanDariTeks('t')).toEqual(urutanDariTeks('k'));
+    expect(urutanDariTeks('l')).toEqual(urutanDariTeks('r'));
   });
 });

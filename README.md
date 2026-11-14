@@ -14,8 +14,8 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 
 Sudah diuji:
 
-- Backend: 116 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
-- Mata: 49 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
+- Backend: 117 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
+- Mata: 53 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
 Belum diuji, dan harus kalian lakukan:
@@ -255,7 +255,10 @@ Huruf dikelompokkan menurut bentuk yang terlihat, karena banyak huruf terlihat s
 | Gigi dan bibir (F) | f, v | Ya: bibir bawah tergulung ke bawah gigi atas, plus hembusan atau suara |
 | Bibir bundar / melebar | w / y | Ya, sebagai bentuk u / i |
 | Hembusan (H) | h | Ya, dari mikrofon: desis napas (zero-crossing tinggi), mulut terbuka |
-| Dibentuk lidah | c, d, g, j, k, l, n, q, r, s, t, x, z | Tidak; hanya tutorial |
+| Desis (S) | s, c, x, z, j | **Sebagian**: gigi hampir rapat dan bibir sedikit terbuka, plus desis di mikrofon |
+| Huruf lidah (T) | t, d, n, l, r, k, g, q | **Sebagian**: mulut sedikit terbuka, plus ada bunyi |
+
+"Sebagian" artinya kamera menilai posisi mulut dan suaranya, bukan lidah. Sistem tidak bisa membedakan t dari k, atau l dari r; ketepatan lidah tetap dinilai guru. Item latihan yang mengandung bunyi ini ditandai `dinilai_sebagian: true` di API, dan huruf tutorialnya ditandai `sebagian`.
 
 ```ts
 import { hurufTutorial, koordinatHuruf, gambarBibir } from './tutorial';

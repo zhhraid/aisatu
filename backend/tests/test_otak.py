@@ -44,14 +44,15 @@ def test_luruh_setengah_selisih_setelah_satu_paruh():
 @pytest.mark.parametrize(
     "teks, urutan",
     [
-        ("bola", ("M", "o", "a")),
+        ("bola", ("M", "o", "T", "a")),
         ("mama", ("M", "a", "M", "a")),
-        ("buku", ("M", "u")),  # k tak terlihat, u-u digabung
+        ("buku", ("M", "u", "T", "u")),
         ("ibu", ("i", "M", "u")),
-        ("susu", ("u",)),
-        ("mobil", ("M", "o", "M", "i")),
+        ("susu", ("S", "u", "S", "u")),
+        ("anggur", ("a", "T", "u", "T")),  # "ngg" digabung jadi satu bunyi lidah
+        ("mobil", ("M", "o", "M", "i", "T")),
         # Bentuk baru: e, f/v, h, dan w/y yang dinilai sebagai u/i.
-        ("meja", ("M", "e", "a")),
+        ("meja", ("M", "e", "S", "a")),
         ("maaf", ("M", "a", "F")),
         ("wahyu", ("u", "a", "H", "i", "u")),
         ("ayah", ("a", "i", "a", "H")),

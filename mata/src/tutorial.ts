@@ -1,4 +1,4 @@
-import type { Bunyi } from './tipe';
+import { DINILAI_SEBAGIAN, type Bunyi } from './tipe';
 
 /**
  * Bentuk bibir contoh untuk huruf a sampai z, sebagai koordinat titik bibir
@@ -32,7 +32,8 @@ export type BentukTutorial =
   | 'katup'
   | 'gigi_bibir'
   | 'lidah'
-  | 'hembusan';
+  | 'hembusan'
+  | 'desis';
 
 interface ParamBentuk {
   /** Setengah lebar mulut, dari pusat ke sudut. */
@@ -64,6 +65,7 @@ const PARAM: Record<BentukTutorial, ParamBentuk> = {
   },
   lidah: { lebar: 0.31, buka: 0.08, bulat: 0.05, tebalAtas: 0.065, tebalBawah: 0.08 },
   hembusan: { lebar: 0.3, buka: 0.15, bulat: 0.1, tebalAtas: 0.06, tebalBawah: 0.075 },
+  desis: { lebar: 0.33, buka: 0.045, bulat: 0, tebalAtas: 0.055, tebalBawah: 0.065 },
 };
 
 export interface HurufTutorial {
@@ -71,6 +73,8 @@ export interface HurufTutorial {
   bentuk: BentukTutorial;
   /** Bentuk yang dinilai kamera untuk huruf ini, atau null kalau tidak bisa dinilai. */
   dinilai: Bunyi | null;
+  /** True kalau hanya dinilai sebagian (posisi mulut dan suara, bukan lidah). */
+  sebagian: boolean;
   /** Petunjuk singkat untuk anak dan pendamping. */
   petunjuk: string;
 }
@@ -84,8 +88,9 @@ const PETUNJUK: Record<BentukTutorial, string> = {
   o: 'Bulatkan bibir, buka sedikit.',
   katup: 'Rapatkan kedua bibir, lalu buka.',
   gigi_bibir: 'Gigi atas menyentuh bibir bawah.',
-  lidah: 'Bibir sedikit terbuka; bunyi ini dibentuk lidah.',
+  lidah: 'Buka mulut sedikit; bunyi ini dibentuk lidah. Perhatikan posisi lidah guru.',
   hembusan: 'Buka mulut dan hembuskan napas. Coba dengan tisu di depan mulut.',
+  desis: 'Rapatkan gigi, buka bibir sedikit, lalu desiskan udara (sss).',
 };
 
 const BENTUK_HURUF: Record<string, BentukTutorial> = {
@@ -94,20 +99,24 @@ const BENTUK_HURUF: Record<string, BentukTutorial> = {
   f: 'gigi_bibir', v: 'gigi_bibir',
   w: 'u', y: 'i',
   h: 'hembusan',
+  s: 'desis', c: 'desis', x: 'desis', z: 'desis', j: 'desis',
 };
 
-// Bentuk yang punya aturan di aturan.ts. "h" dinilai dari hembusan napas.
+// Bentuk yang punya aturan di aturan.ts. "h" dinilai dari hembusan napas; desis dan
+// huruf lidah dinilai sebagian (posisi mulut dan suara, bukan lidah).
 const DINILAI: Partial<Record<BentukTutorial, Bunyi>> = {
   a: 'a', i: 'i', u: 'u', e: 'e', o: 'o', katup: 'M', gigi_bibir: 'F', hembusan: 'H',
+  desis: 'S', lidah: 'T',
 };
 
 /** Data tutorial untuk satu huruf. Huruf di luar a-z memakai bentuk netral. */
 export function hurufTutorial(huruf: string): HurufTutorial {
   const h = huruf.toLowerCase();
   const bentuk: BentukTutorial = BENTUK_HURUF[h] ?? (/^[a-z]$/.test(h) ? 'lidah' : 'netral');
-  // w dan y memakai bentuk u dan i, dan dinilai sebagai bentuk itu.
-  const dinilai = DINILAI[bentuk] ?? null;
-  return { huruf: h, bentuk, dinilai, petunjuk: PETUNJUK[bentuk] };
+  // w dan y memakai bentuk u dan i, dan dinilai sebagai bentuk itu. Selain a-z: tidak dinilai.
+  const dinilai = /^[a-z]$/.test(h) ? (DINILAI[bentuk] ?? null) : null;
+  const sebagian = dinilai !== null && DINILAI_SEBAGIAN.includes(dinilai);
+  return { huruf: h, bentuk, dinilai, sebagian, petunjuk: PETUNJUK[bentuk] };
 }
 
 export const ABJAD: readonly HurufTutorial[] = 'abcdefghijklmnopqrstuvwxyz'
