@@ -8,7 +8,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from satu_ai import mulut, otak, pengetahuan
+from satu_ai import llm, mulut, otak, pengetahuan
 from satu_ai.api import buat_router
 from satu_ai.kurikulum import ITEM_PER_ID
 
@@ -173,12 +173,12 @@ FOKUS = [{"bunyi": "u", "tingkat": 2, "label": "sedang_dilatih", "alasan": "mace
 
 def test_saran_dari_llm_dengan_rujukan_dan_data():
     jawab = {"saran": [
-        {"teks": "Latih ANAK memajukan bibir untuk bunyi u selama 5 menit.", "rujukan": ["R1"]},
-        {"teks": "Ulangi bunyi o karena mulai menurun.", "rujukan": ["DATA"]},
+        {"bunyi": "u", "teks": "Latih ANAK memajukan bibir untuk bunyi u selama 5 menit.", "rujukan": ["R1"]},
+        {"bunyi": "o", "teks": "Ulangi bunyi o karena mulai menurun.", "rujukan": ["DATA"]},
     ]}
     hasil = asyncio.run(mulut.saran_belajar(FOKUS, "Sinta", RUJ, llm_palsu(jawab)))
     assert hasil["sumber"] == "llm"
-    assert hasil["saran"][0] == {"teks": "Latih Sinta memajukan bibir untuk bunyi u selama 5 menit.",
+    assert hasil["saran"][0] == {"bunyi": "u", "teks": "Latih Sinta memajukan bibir untuk bunyi u selama 5 menit.",
                                  "rujukan": [{"judul": "Buku A", "url": "https://a", "halaman": 12}]}
     assert hasil["saran"][1]["rujukan"] == []
 
@@ -186,9 +186,13 @@ def test_saran_dari_llm_dengan_rujukan_dan_data():
 @pytest.mark.parametrize("rusak", [
     None,
     {"saran": []},
-    {"saran": [{"teks": "Sudah 80% bisa.", "rujukan": ["DATA"]}]},
-    {"saran": [{"teks": "Latihan tanpa dasar.", "rujukan": []}]},
-    {"saran": [{"teks": "Rujukan karangan.", "rujukan": ["R7"]}]},
+    {"saran": [{"bunyi": "u", "teks": "Sudah 80% bisa.", "rujukan": ["DATA"]}, {"bunyi": "o", "teks": "Ulangi o.", "rujukan": ["DATA"]}]},
+    {"saran": [{"bunyi": "u", "teks": "Latihan tanpa dasar.", "rujukan": []}, {"bunyi": "o", "teks": "Ulangi o.", "rujukan": ["DATA"]}]},
+    {"saran": [{"bunyi": "u", "teks": "Rujukan karangan.", "rujukan": ["R7"]}, {"bunyi": "o", "teks": "Ulangi o.", "rujukan": ["DATA"]}]},
+    # Gemini memilih huruf sendiri atau mengubah urutan: ditolak.
+    {"saran": [{"bunyi": "e", "teks": "Latih bunyi e.", "rujukan": ["DATA"]}, {"bunyi": "o", "teks": "Ulangi o.", "rujukan": ["DATA"]}]},
+    {"saran": [{"bunyi": "o", "teks": "Ulangi o.", "rujukan": ["DATA"]}, {"bunyi": "u", "teks": "Latih u.", "rujukan": ["DATA"]}]},
+    {"saran": [{"bunyi": "u", "teks": "Latih u.", "rujukan": ["DATA"]}]},
 ])
 def test_saran_yang_tidak_berdasar_jatuh_ke_templat_dari_data(rusak):
     hasil = asyncio.run(mulut.saran_belajar(FOKUS, "Sinta", RUJ, llm_palsu(rusak)))
@@ -240,13 +244,13 @@ def test_kode_rujukan_dibuang_dari_kalimat(kotor, bersih):
 
 def test_saran_dari_llm_tanpa_kode_di_kalimat():
     jawab = {"saran": [
-        {"teks": "Ajak ANAK melatih bunyi /i/ dengan cermin sesuai R1.", "rujukan": ["R1"]},
-        {"teks": "Latih bunyi /u/ dengan benda konkret berdasarkan DATA.", "rujukan": ["DATA"]},
+        {"bunyi": "u", "teks": "Ajak ANAK melatih bunyi /u/ dengan cermin sesuai R1.", "rujukan": ["R1"]},
+        {"bunyi": "o", "teks": "Latih bunyi /o/ dengan benda konkret berdasarkan DATA.", "rujukan": ["DATA"]},
     ]}
     hasil = asyncio.run(mulut.saran_belajar(FOKUS, "Sinta", RUJ, llm_palsu(jawab)))
     assert [s["teks"] for s in hasil["saran"]] == [
-        "Ajak Sinta melatih bunyi /i/ dengan cermin.",
-        "Latih bunyi /u/ dengan benda konkret.",
+        "Ajak Sinta melatih bunyi /u/ dengan cermin.",
+        "Latih bunyi /o/ dengan benda konkret.",
     ]
 
 
@@ -346,3 +350,35 @@ def test_model_bibir_disimpan_dan_dimuat_per_anak(monkeypatch):
     assert k.put("/ai/anak/sinta/model-bibir", json={"model": {**model, "versi": 2}}).status_code == 422
     # Menyimpan model tidak mengubah penguasaan anak.
     assert k.get("/ai/anak/sinta/peta").json()["hari_latihan_minggu_ini"] == 0
+
+
+def test_klien_llm_memakai_suhu_rendah_supaya_konsisten(monkeypatch):
+    import httpx
+
+    terkirim = {}
+
+    def penangan(permintaan):
+        terkirim.update(json.loads(permintaan.content))
+        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+
+    monkeypatch.setenv("LLM_BASE_URL", "https://llm.contoh/v1")
+    monkeypatch.setenv("LLM_API_KEY", "k")
+    monkeypatch.setenv("LLM_MODEL", "m")
+    monkeypatch.delenv("LLM_SUHU", raising=False)
+    asli = httpx.AsyncClient
+    monkeypatch.setattr(llm.httpx, "AsyncClient", lambda **kw: asli(transport=httpx.MockTransport(penangan), **kw))
+    asyncio.run(llm.panggil_json("aturan", "data"))
+    assert terkirim["temperature"] == 0.2
+
+
+def test_usulan_dan_fokus_saran_sama_bila_data_sama(monkeypatch):
+    for kunci in ("LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"):
+        monkeypatch.delenv(kunci, raising=False)
+    app = FastAPI()
+    app.include_router(buat_router(demo=False))  # mode biasa, dengan pemilihan acak
+    k = TestClient(app)
+    for i in range(3):
+        k.post(f"/ai/anak/sinta/percobaan", json={"item_id": "t1-u", "berhasil": i == 2})
+    tugas = {tuple(t["item"]["id"] for t in k.post("/ai/anak/sinta/tugas-usulan", json={"nama": "S"}).json()["tugas"]) for _ in range(5)}
+    fokus = {tuple(f["bunyi"] for f in k.post("/ai/anak/sinta/saran-belajar", json={"nama": "S"}).json()["fokus"]) for _ in range(5)}
+    assert len(tugas) == 1 and len(fokus) == 1

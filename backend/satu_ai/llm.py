@@ -10,6 +10,7 @@ Diatur dari environment variable, supaya kunci API hanya ada di server:
                         (Gemini 3 dan sejenisnya) memakai sebagian batas ini untuk berpikir,
                         jadi jangan dibuat kecil.
   LLM_REASONING_EFFORT  opsional: minimal, low, medium, atau high. Kosong = bawaan penyedia.
+  LLM_SUHU              keacakan jawaban, bawaan 0.2 (rendah supaya konsisten).
 
 Kalau tiga yang pertama ada yang kosong, atau panggilan gagal, fungsi mengembalikan
 None dan pemanggil memakai templat.
@@ -75,6 +76,8 @@ async def panggil_json(sistem: str, pesan: str) -> dict | None:
             {"role": "user", "content": pesan},
         ],
         "max_tokens": int(os.getenv("LLM_MAKS_TOKEN", "2000")),
+        # Suhu rendah: data yang sama menghasilkan saran yang sama, tidak berganti-ganti.
+        "temperature": float(os.getenv("LLM_SUHU", "0.2")),
     }
     if os.getenv("LLM_REASONING_EFFORT"):
         badan["reasoning_effort"] = os.environ["LLM_REASONING_EFFORT"]

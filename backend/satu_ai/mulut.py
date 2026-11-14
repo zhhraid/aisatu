@@ -335,13 +335,14 @@ async def laporan_mingguan(
 
 SISTEM_SARAN = (
     "Kamu membantu guru bina wicara di SLB menyusun saran belajar untuk satu anak tunarungu. "
-    "Dasarnya dua hal saja: data latihan anak dan isi rujukan yang diberikan. Tulis dua sampai "
-    "tiga saran kegiatan yang konkret, masing-masing satu atau dua kalimat, untuk bunyi yang "
-    "paling perlu dilatih. Setiap saran wajib menyebut kode rujukan yang mendasarinya, atau "
+    "Dasarnya dua hal saja: data latihan anak dan isi rujukan yang diberikan. Tulis TEPAT satu "
+    "saran kegiatan yang konkret untuk SETIAP bunyi di data_latihan, dengan urutan yang sama, "
+    "masing-masing satu atau dua kalimat; jangan memilih atau menambah bunyi lain. Isi field "
+    "\"bunyi\" persis seperti di data_latihan. Setiap saran wajib menyebut kode rujukan yang mendasarinya, atau "
     '"DATA" kalau hanya berdasar data latihan. Jangan mengarang fakta, jangan menyebut persen, '
     "jangan memberi diagnosis atau saran medis. Sebut anak sebagai ANAK. Kode rujukan hanya "
     'ditulis di field "rujukan", jangan di dalam teks. '
-    'Jawab hanya JSON: {"saran": [{"teks": "...", "rujukan": ["R1"]}]} tiap teks paling banyak 40 kata.'
+    'Jawab hanya JSON: {"saran": [{"bunyi": "...", "teks": "...", "rujukan": ["R1"]}]} tiap teks paling banyak 40 kata.'
 )
 
 _PETUNJUK_BUNYI = {
@@ -369,6 +370,7 @@ def _templat_saran(fokus: list[dict]) -> list[dict]:
         }[f["alasan"]]
         hasil.append(
             {
+                "bunyi": bunyi,
                 "teks": f"Bunyi {bunyi} {alasan}. Latih di tahap {NAMA_TAHAP[f['tingkat']]} "
                 f"di depan cermin: {_PETUNJUK_BUNYI.get(f['bunyi'], 'tiru bentuk bibir guru')}.",
                 "rujukan": [],
@@ -403,6 +405,12 @@ async def saran_belajar(
     }
     jawab = await pemanggil(SISTEM_SARAN, json.dumps(masukan, ensure_ascii=False))
     butir = jawab.get("saran") if jawab else None
+    # Satu saran per bunyi pilihan Otak, urutan sama: Gemini tidak boleh memilih huruf sendiri.
+    harus = [nama_bunyi(f["bunyi"]) for f in fokus]
+    if isinstance(butir, list) and [b.get("bunyi") if isinstance(b, dict) else None for b in butir] != harus:
+        if jawab:
+            log.warning("Saran belajar tidak mengikuti bunyi pilihan Otak %s, pakai templat: %r", harus, str(jawab)[:300])
+        butir = None
     if not isinstance(butir, list) or not 1 <= len(butir) <= 3:
         if jawab:
             log.warning("Saran belajar dari LLM ditolak (bentuk), pakai templat: %r", str(jawab)[:300])
@@ -421,7 +429,7 @@ async def saran_belajar(
             log.warning("Saran belajar menyebut rujukan yang tidak ada, pakai templat: %r", str(jawab)[:300])
             hasil = None
             break
-        hasil.append({"teks": _isi_nama(buang_kode(teks), nama), "rujukan": sebutan})
+        hasil.append({"bunyi": b["bunyi"], "teks": _isi_nama(buang_kode(teks), nama), "rujukan": sebutan})
     if hasil is None:
         return {**cadangan, "saran": [{**s, "teks": _isi_nama(s["teks"], nama)} for s in cadangan["saran"]]}
     return {"saran": hasil, "sumber": "llm"}

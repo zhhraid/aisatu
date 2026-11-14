@@ -14,7 +14,7 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 
 Sudah diuji:
 
-- Backend: 135 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
+- Backend: 140 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
 - Mata: 72 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
@@ -71,6 +71,7 @@ Isi `.env`:
 | `LLM_REASONING_EFFORT` | Opsional: `minimal`, `low`, `medium`, `high`. Untuk Gemini 3 pakai `low` supaya cepat |
 | `LLM_MAKS_TOKEN` | Batas token keluaran, bawaan 2000. Model yang berpikir dulu memakai sebagian untuk berpikir |
 | `LLM_BATAS_DETIK` | Batas waktu satu panggilan, bawaan 12 |
+| `LLM_SUHU` | Keacakan jawaban Gemini, bawaan 0,2 (rendah supaya saran konsisten untuk data yang sama) |
 | `SATU_DEMO` | `1` = pemilihan latihan tanpa acak dan endpoint data demo aktif |
 
 Kalau tiga variabel pertama kosong, atau panggilan gagal, semua teks memakai templat. Field `sumber` di jawaban berisi `llm` atau `templat`. Kalau hasilnya `templat` padahal kunci sudah diisi, penyebabnya tercetak di log backend: kode HTTP dari penyedia, keluaran yang terpotong, atau keluaran yang ditolak pagar.
