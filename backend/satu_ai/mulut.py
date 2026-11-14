@@ -63,6 +63,21 @@ def periksa_teks(
     return None
 
 
+# Kode selalu huruf besar (R1, DATA, TIPS), jadi kata biasa "data" dan "tips" tidak ikut terhapus.
+_KODE_RUJUKAN = re.compile(
+    r"\s*[\(\[]?\s*(?:(?i:sesuai|berdasarkan|menurut|lihat|merujuk)\s+)?"
+    r"(?:(?i:kode\s+)?(?i:rujukan)\s+)?\b(?:R\d+|DATA|TIPS)\b\s*[\)\]]?"
+)
+
+
+def buang_kode(teks: str) -> str:
+    """Membuang kode internal (R1, DATA, TIPS) yang kadang ikut ditulis LLM di kalimat."""
+    hasil = _KODE_RUJUKAN.sub("", teks)
+    hasil = re.sub(r"\s+([.,;:!?])", r"\1", hasil)
+    hasil = re.sub(r"\s{2,}", " ", hasil).strip().lstrip(",;: ")
+    return hasil[:1].upper() + hasil[1:]
+
+
 def _isi_nama(teks: str, nama: str) -> str:
     return teks.replace("ANAK", nama)
 
@@ -210,7 +225,8 @@ SISTEM_LAPORAN = (
     "Untuk cara membantu, pakai tips yang diberikan dan isi rujukan (kalau ada) dengan "
     "kata-katamu sendiri; jangan menambah saran yang tidak ada di situ. Jangan menyebut angka, "
     "jangan membandingkan dengan anak lain, jangan menjanjikan hasil, jangan memberi saran "
-    "medis. Sebut anak sebagai ANAK. "
+    "medis. Sebut anak sebagai ANAK. Kode rujukan hanya ditulis di field \"rujukan\", jangan "
+    "di dalam teks. "
     'Jawab hanya JSON: {"sudah_bisa": "...", "sedang_dilatih": "...", "cara_membantu": "...", '
     '"rujukan": ["R1"]} tiap bagian paling banyak 30 kata. "rujukan" berisi kode rujukan yang '
     'dipakai untuk cara membantu, atau ["TIPS"] kalau hanya memakai tips.'
@@ -298,7 +314,7 @@ async def laporan_mingguan(
     if jawab and all(periksa_teks(jawab.get(k), 30) is None for k in _BAGIAN_LAPORAN):
         sebutan = _rujukan_dipakai(jawab.get("rujukan", ["TIPS"]), rujukan or [], boleh_tips=True)
         if sebutan is not None:
-            bagian = {k: jawab[k].strip() for k in _BAGIAN_LAPORAN}
+            bagian = {k: buang_kode(jawab[k]) for k in _BAGIAN_LAPORAN}
             sumber, dipakai = "llm", sebutan
         else:
             log.warning("Laporan mingguan menyebut rujukan yang tidak ada, pakai templat: %r", str(jawab)[:300])
@@ -320,7 +336,8 @@ SISTEM_SARAN = (
     "tiga saran kegiatan yang konkret, masing-masing satu atau dua kalimat, untuk bunyi yang "
     "paling perlu dilatih. Setiap saran wajib menyebut kode rujukan yang mendasarinya, atau "
     '"DATA" kalau hanya berdasar data latihan. Jangan mengarang fakta, jangan menyebut persen, '
-    "jangan memberi diagnosis atau saran medis. Sebut anak sebagai ANAK. "
+    "jangan memberi diagnosis atau saran medis. Sebut anak sebagai ANAK. Kode rujukan hanya "
+    'ditulis di field "rujukan", jangan di dalam teks. '
     'Jawab hanya JSON: {"saran": [{"teks": "...", "rujukan": ["R1"]}]} tiap teks paling banyak 40 kata.'
 )
 
@@ -396,7 +413,7 @@ async def saran_belajar(
             log.warning("Saran belajar menyebut rujukan yang tidak ada, pakai templat: %r", str(jawab)[:300])
             hasil = None
             break
-        hasil.append({"teks": _isi_nama(teks.strip(), nama), "rujukan": sebutan})
+        hasil.append({"teks": _isi_nama(buang_kode(teks), nama), "rujukan": sebutan})
     if hasil is None:
         return {**cadangan, "saran": [{**s, "teks": _isi_nama(s["teks"], nama)} for s in cadangan["saran"]]}
     return {"saran": hasil, "sumber": "llm"}

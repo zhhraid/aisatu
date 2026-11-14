@@ -223,3 +223,28 @@ def test_endpoint_saran_belajar(monkeypatch):
     assert hasil["saran"] and all(s["teks"] for s in hasil["saran"])
     laporan = k.post("/ai/anak/sinta/laporan-mingguan", json={"nama": "Sinta"}).json()
     assert laporan["rujukan"] == []  # templat tidak menyebut rujukan
+
+
+@pytest.mark.parametrize("kotor, bersih", [
+    ("Ajak ANAK bercermin agar posisi bibir lebih tepat sesuai R3.", "Ajak ANAK bercermin agar posisi bibir lebih tepat."),
+    ("Latih bunyi /u/ dengan benda konkret berdasarkan DATA.", "Latih bunyi /u/ dengan benda konkret."),
+    ("Gunakan kartu gambar (R1) setiap hari.", "Gunakan kartu gambar setiap hari."),
+    ("Menurut rujukan R2, latihan dimulai dari pelemasan.", "Latihan dimulai dari pelemasan."),
+    ("Pakai tips TIPS, duduk berhadapan.", "Pakai tips, duduk berhadapan."),
+    ("Catat data latihan dan beri tips singkat.", "Catat data latihan dan beri tips singkat."),
+    ("Ulangi bunyi a di Rumah.", "Ulangi bunyi a di Rumah."),
+])
+def test_kode_rujukan_dibuang_dari_kalimat(kotor, bersih):
+    assert mulut.buang_kode(kotor) == bersih
+
+
+def test_saran_dari_llm_tanpa_kode_di_kalimat():
+    jawab = {"saran": [
+        {"teks": "Ajak ANAK melatih bunyi /i/ dengan cermin sesuai R1.", "rujukan": ["R1"]},
+        {"teks": "Latih bunyi /u/ dengan benda konkret berdasarkan DATA.", "rujukan": ["DATA"]},
+    ]}
+    hasil = asyncio.run(mulut.saran_belajar(FOKUS, "Sinta", RUJ, llm_palsu(jawab)))
+    assert [s["teks"] for s in hasil["saran"]] == [
+        "Ajak Sinta melatih bunyi /i/ dengan cermin.",
+        "Latih bunyi /u/ dengan benda konkret.",
+    ]
