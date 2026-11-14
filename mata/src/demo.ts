@@ -455,6 +455,7 @@ function latihModelPersonal(contohFrame: Record<BentukBibir, Fitur[]>): void {
 
 masukan('pakaiModel').addEventListener('change', () => {
   if (mata) mata.model = masukan('pakaiModel').checked ? modelTerlatih : null;
+  tampilkanAkurasi();
 });
 
 // --------------------------------------------------------------- uji akurasi
@@ -471,9 +472,17 @@ for (const b of BENTUK_BIBIR as BentukBibir[]) {
 
 function tampilkanAkurasi(): void {
   const persen = (x: number | null) => (x === null ? '-' : `${Math.round(x * 100)}%`);
+  const keteranganModel = mata?.model
+    ? persen(matriksModel.akurasi())
+    : modelTerlatih
+      ? `tidak dipakai (akurasi validasi ${Math.round((modelTerlatih.akurasi ?? 0) * 100)}%, di bawah ${Math.round(AKURASI_MODEL_MIN * 100)}%)`
+      : 'belum ada model (jalankan Setel otomatis)';
   el('ringkasUji').textContent =
     `${matriksAturan.jumlah} rekaman. Akurasi aturan: ${persen(matriksAturan.akurasi())}. ` +
-    `Akurasi model personal: ${modelTerlatih ? persen(matriksModel.akurasi()) : 'belum ada model'}.`;
+    `Akurasi model personal: ${keteranganModel}` +
+    (matriksModel.jumlah && matriksModel.jumlah !== matriksAturan.jumlah
+      ? ` (dari ${matriksModel.jumlah} rekaman saat model dipakai).`
+      : '.');
   el('tabelAturan').textContent = matriksAturan.jumlah ? matriksAturan.keTsv() : '';
   el('tabelModel').textContent = matriksModel.jumlah ? matriksModel.keTsv() : '';
 }
@@ -490,7 +499,9 @@ async function rekamSatu(target: BentukBibir, awalan = ''): Promise<void> {
   const frame = await kumpulkanBentuk(2000);
   if (frame.length < 5) throw new Error('Wajah tidak terlihat. Ulangi.');
   matriksAturan.tambah(target, tebakanTerbanyak(frame.map((f) => tebakAturan(f, mata!.ambang))));
-  const model = mata!.model ?? modelTerlatih;
+  // Hanya model yang layak dan sedang dipakai yang dinilai; model yang belum cukup akurat
+  // tidak dipakai menilai anak, jadi tidak adil ikut dihitung.
+  const model = mata!.model;
   if (model) matriksModel.tambah(target, tebakanTerbanyak(frame.map((f) => tebakModel(f, model))));
   arahan.textContent = '';
   tampilkanAkurasi();
