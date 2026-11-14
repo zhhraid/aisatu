@@ -1,4 +1,4 @@
-import { AMBANG_BAWAAN, kemiripan, nilaiBentuk, type Ambang, type Penilaian, type Petunjuk } from './aturan';
+import { AMBANG_BAWAAN, kemiripan, medianFitur, nilaiBentuk, type Ambang, type Penilaian, type Petunjuk } from './aturan';
 import { prediksi, type ModelBibir } from './model';
 import type { Bunyi, Fitur } from './tipe';
 
@@ -81,6 +81,11 @@ export interface HasilPercobaan {
   /** 1 sampai 3. Gagal tetap dapat 1 bintang supaya anak tidak patah semangat. */
   bintang: number;
   poin: number;
+  /**
+   * Median bentuk bibir saat bentuk benar ditahan, untuk bunyi tunggal yang berhasil.
+   * Dipakai model personal untuk terus belajar; tidak perlu dikirim ke backend.
+   */
+  contoh?: Fitur;
 }
 
 /** Bintang dari hasil: berhasil dan mirip (>= 80%) = 3, berhasil = 2, belum berhasil = 1. */
@@ -99,6 +104,7 @@ export class Percobaan {
   private lepas = 0;
   private aktifMs = 0;
   private jumlahKemiripan = 0;
+  private readonly frameBenar: Fitur[] = [];
   private kemiripanTerakhir = 0;
   private tSebelum: number | null = null;
   private status: StatusPercobaan = 'berjalan';
@@ -198,6 +204,7 @@ export class Percobaan {
     if (ok) {
       this.tahan += dt;
       this.lepas = 0;
+      if (this.tunggal) this.frameBenar.push(frame.fitur);
     } else {
       this.lepas += dt;
       if (this.lepas > this.opsi.toleransiMs) this.tahan = 0;
@@ -238,6 +245,7 @@ export class Percobaan {
       kemiripan: Math.round(rata * 100) / 100,
       bintang,
       poin: bintang * 10,
+      ...(berhasil && this.tunggal && this.frameBenar.length ? { contoh: medianFitur(this.frameBenar) } : {}),
     };
   }
 }

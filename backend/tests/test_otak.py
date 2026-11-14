@@ -450,3 +450,36 @@ def test_penguatan_diselingi_bukan_terus_menerus():
     s.jendela = [False, False, True, False, False, True]  # masih sering gagal
     kedua = otak.pilih_berikutnya(s, T0)
     assert kedua.alasan != "penguatan" and kedua.item.id != "t1-a"
+
+
+# ------------------------------------------------------------------ lelah
+
+
+def test_sesi_segar_tidak_lelah():
+    s = otak.StatusAnak()
+    for i in range(12):
+        otak.catat_percobaan(s, ITEM_PER_ID["t1-a"], True, 1, T0 + timedelta(seconds=20 * i), 1500)
+    assert otak.deteksi_lelah(s, T0 + timedelta(minutes=4)) == {"lelah": False, "alasan": []}
+
+
+def test_lelah_karena_lama_banyak_melambat_atau_menurun():
+    s = otak.StatusAnak()
+    waktu = T0
+    for i in range(20):
+        berhasil = i < 10 or i % 3 == 0  # awal lancar, akhir sering gagal
+        durasi = 1500 if i < 10 else 3500  # makin lambat
+        otak.catat_percobaan(s, ITEM_PER_ID["t1-a"], berhasil, 0, waktu, durasi)
+        waktu += timedelta(seconds=55)
+    hasil = otak.deteksi_lelah(s, waktu)
+    assert hasil["lelah"] is True
+    assert hasil["alasan"] == ["sudah berlatih 15 menit", "makin lama menjawab", "makin sering gagal dibanding awal sesi"]
+
+
+def test_sesi_baru_setelah_jeda_mengatur_ulang_tanda_lelah():
+    s = otak.StatusAnak()
+    for i in range(41):
+        otak.catat_percobaan(s, ITEM_PER_ID["t1-a"], True, 1, T0 + timedelta(seconds=10 * i), 1500)
+    assert "sudah 41 percobaan" in otak.deteksi_lelah(s, T0 + timedelta(minutes=7))["alasan"]
+    besok = T0 + timedelta(days=1)
+    otak.catat_percobaan(s, ITEM_PER_ID["t1-a"], True, 1, besok, 1500)
+    assert otak.deteksi_lelah(s, besok)["lelah"] is False

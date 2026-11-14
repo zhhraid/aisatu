@@ -154,13 +154,15 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
         sekarang = otak.sekarang_utc()
         status = simpanan.muat(anak_id)
         perubahan = otak.catat_percobaan(
-            status, item, masukan.berhasil, masukan.langkah_tercapai, sekarang
+            status, item, masukan.berhasil, masukan.langkah_tercapai, sekarang, masukan.durasi_ms
         )
         simpanan.simpan(anak_id, status)
         return {
             "perubahan": perubahan,
             "tingkat_berhasil": otak.tingkat_berhasil(status),
             "streak": otak.streak(status, sekarang),
+            # Saran berhenti hari ini; tampilkan sebagai ajakan istirahat, bukan larangan.
+            "lelah": otak.deteksi_lelah(status, sekarang),
             "berikutnya": otak.pilih_berikutnya(status, sekarang, rng).ke_dict(),
         }
 

@@ -165,6 +165,7 @@ def test_alur_sesi_sampai_naik_tingkat(klien):
     # "a" tiga kali sampai "sudah bisa", lalu "i", lalu lima berhasil beruntun menaikkan tingkat.
     assert urutan_id == ["t1-a", "t1-a", "t1-a", "t1-i", "t1-i", "t2-a"]
     assert jawab["tingkat_berhasil"] == 1.0
+    assert jawab["lelah"] == {"lelah": False, "alasan": []}
 
     peta = klien.get("/ai/anak/raka/peta").json()
     a = next(b for b in peta["bunyi"] if b["bunyi"] == "a")

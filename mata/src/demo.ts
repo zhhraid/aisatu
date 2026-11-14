@@ -140,6 +140,7 @@ tombol('tombolKamera').addEventListener('click', async () => {
     tombol('tombolCoba').disabled = false;
     tombol('tombolSetel').disabled = false;
     tombol('tombolRekam').disabled = false;
+    tombol('tombolBerpandu').disabled = false;
     el('statusKalibrasi').textContent = 'Belum dikalibrasi: angka di samping masih mentah.';
     t.textContent = 'Kamera aktif';
     document.body.dataset['siap'] = '1';
@@ -177,7 +178,14 @@ tombol('tombolCoba').addEventListener('click', async () => {
   const target = masukan('target').value.trim();
   mata.aturPercobaan({ tanpaSuara: masukan('tanpaSuara').checked });
 
+  const pembaruanSebelum = mata.model?.pembaruan ?? 0;
   const hasil = await mata.percobaan(urutan, tampilkanKeadaan).hasil;
+  if (mata.model && (mata.model.pembaruan ?? 0) > pembaruanSebelum) {
+    modelTerlatih = mata.model;
+    el('statusModel').textContent =
+      `Model personal belajar dari percobaan ini (${mata.model.pembaruan} kali sejak dilatih). ` +
+      'Tekan "Simpan model ke Otak" untuk menyimpannya.';
+  }
   sedangCoba = false;
   tombol('tombolCoba').disabled = false;
   if (!hasil) return;
@@ -470,27 +478,63 @@ function tampilkanAkurasi(): void {
   el('tabelModel').textContent = matriksModel.jumlah ? matriksModel.keTsv() : '';
 }
 
+/** Merekam satu bentuk 2 detik dan mencatat tebakan aturan dan model personal. */
+async function rekamSatu(target: BentukBibir, awalan = ''): Promise<void> {
+  const arahan = el('arahanUji');
+  pilihHuruf(target === 'M' ? 'm' : target === 'F' ? 'f' : target);
+  for (let hitung = 3; hitung > 0; hitung--) {
+    arahan.textContent = `${awalan}Siap-siap: ${NAMA_BENTUK[target]} (${hitung})`;
+    await tunggu(500);
+  }
+  arahan.textContent = `${awalan}Tahan ${NAMA_BENTUK[target]}...`;
+  const frame = await kumpulkanBentuk(2000);
+  if (frame.length < 5) throw new Error('Wajah tidak terlihat. Ulangi.');
+  matriksAturan.tambah(target, tebakanTerbanyak(frame.map((f) => tebakAturan(f, mata!.ambang))));
+  const model = mata!.model ?? modelTerlatih;
+  if (model) matriksModel.tambah(target, tebakanTerbanyak(frame.map((f) => tebakModel(f, model))));
+  arahan.textContent = '';
+  tampilkanAkurasi();
+}
+
+function kunciUji(kunci: boolean): void {
+  tombol('tombolRekam').disabled = kunci;
+  tombol('tombolBerpandu').disabled = kunci;
+}
+
 tombol('tombolRekam').addEventListener('click', async () => {
   if (!mata) return;
-  const target = pilihTarget.value as BentukBibir;
-  tombol('tombolRekam').disabled = true;
-  const arahan = el('arahanUji');
+  kunciUji(true);
   try {
-    for (let hitung = 3; hitung > 0; hitung--) {
-      arahan.textContent = `Siap-siap: ${NAMA_BENTUK[target]} (${hitung})`;
-      await tunggu(500);
-    }
-    arahan.textContent = `Tahan ${NAMA_BENTUK[target]}...`;
-    const frame = await kumpulkanBentuk(2000);
-    if (frame.length < 5) throw new Error('Wajah tidak terlihat. Ulangi.');
-    matriksAturan.tambah(target, tebakanTerbanyak(frame.map((f) => tebakAturan(f, mata!.ambang))));
-    if (modelTerlatih) matriksModel.tambah(target, tebakanTerbanyak(frame.map((f) => tebakModel(f, modelTerlatih!))));
-    arahan.textContent = '';
-    tampilkanAkurasi();
+    await rekamSatu(pilihTarget.value as BentukBibir);
   } catch (galat) {
-    arahan.textContent = (galat as Error).message;
+    el('arahanUji').textContent = (galat as Error).message;
   } finally {
-    tombol('tombolRekam').disabled = false;
+    kunciUji(false);
+  }
+});
+
+const PUTARAN_BERPANDU = 3;
+
+tombol('tombolBerpandu').addEventListener('click', async () => {
+  if (!mata) return;
+  if (!mata.terkalibrasi) {
+    el('arahanUji').textContent = 'Kalibrasi dulu (tombol Kalibrasi di kartu 1).';
+    return;
+  }
+  kunciUji(true);
+  // Urutan acak supaya penguji tidak sekadar mengulang bentuk yang sama berturut-turut.
+  const daftar = Array.from({ length: PUTARAN_BERPANDU }, () => [...BENTUK_BIBIR] as BentukBibir[])
+    .flatMap((putaran) => putaran.sort(() => Math.random() - 0.5));
+  try {
+    for (let i = 0; i < daftar.length; i++) {
+      await rekamSatu(daftar[i]!, `${i + 1}/${daftar.length} · `);
+    }
+    el('arahanUji').textContent = 'Uji berpandu selesai. Tekan "Salin tabel" untuk slide.';
+    document.body.dataset['uji'] = 'selesai';
+  } catch (galat) {
+    el('arahanUji').textContent = (galat as Error).message;
+  } finally {
+    kunciUji(false);
   }
 });
 

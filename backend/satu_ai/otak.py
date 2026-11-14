@@ -76,6 +76,10 @@ class StatusAnak:
     riwayat: dict[str, dict] = field(default_factory=dict)
     tadi_penguatan: bool = False  # latihan terakhir adalah item yang sudah dikuasai
     model_bibir: dict | None = None  # model bibir personal dari Mata (nearest centroid)
+    # Sesi ini, untuk deteksi lelah: kapan mulai, hasil, dan lama tiap percobaan.
+    sesi_mulai: datetime | None = None
+    hasil_sesi: list[bool] = field(default_factory=list)
+    durasi_sesi: list[int] = field(default_factory=list)
 
     def ambil(self, bunyi: str, tingkat: int) -> KC:
         kunci = (bunyi, tingkat)
@@ -109,6 +113,9 @@ class StatusAnak:
             "riwayat": self.riwayat,
             "tadi_penguatan": self.tadi_penguatan,
             "model_bibir": self.model_bibir,
+            "sesi_mulai": iso(self.sesi_mulai),
+            "hasil_sesi": list(self.hasil_sesi),
+            "durasi_sesi": list(self.durasi_sesi),
         }
 
     @classmethod
@@ -137,6 +144,9 @@ class StatusAnak:
         status.riwayat = {t: {**r, "kc": dict(r.get("kc", {}))} for t, r in d.get("riwayat", {}).items()}
         status.tadi_penguatan = d.get("tadi_penguatan", False)
         status.model_bibir = d.get("model_bibir")
+        status.sesi_mulai = waktu(d.get("sesi_mulai"))
+        status.hasil_sesi = list(d.get("hasil_sesi", []))
+        status.durasi_sesi = list(d.get("durasi_sesi", []))
         return status
 
 
@@ -192,6 +202,9 @@ def mulai_sesi(status: StatusAnak) -> None:
     status.gagal_beruntun = 0
     status.ulang_beruntun = 0
     status.turun = None
+    status.sesi_mulai = None
+    status.hasil_sesi = []
+    status.durasi_sesi = []
 
 
 def catat_percobaan(
@@ -200,6 +213,7 @@ def catat_percobaan(
     berhasil: bool,
     langkah_tercapai: int,
     sekarang: datetime,
+    durasi_ms: int | None = None,
 ) -> list[dict]:
     """Memperbarui penguasaan dari satu percobaan. Mengembalikan daftar perubahan.
 
@@ -208,6 +222,10 @@ def catat_percobaan(
     """
     if status.percobaan_terakhir and sekarang - status.percobaan_terakhir > JEDA_SESI_BARU:
         mulai_sesi(status)
+    status.sesi_mulai = status.sesi_mulai or sekarang
+    status.hasil_sesi = (status.hasil_sesi + [berhasil])[-200:]
+    if durasi_ms is not None:
+        status.durasi_sesi = (status.durasi_sesi + [durasi_ms])[-200:]
 
     macet: str | None = None
     if berhasil:
@@ -688,3 +706,38 @@ def tren(status: StatusAnak, sekarang: datetime, hari: int = 7) -> dict:
         "berhasil_minggu_ini": laju([h for h in r["harian"] if h["tanggal"] >= batas]),
         "berhasil_sebelumnya": laju([h for h in r["harian"] if h["tanggal"] < batas]),
     }
+
+
+# ------------------------------------------------------------------ lelah
+
+LAMA_SESI_MAKS = timedelta(minutes=15)
+PERCOBAAN_SESI_MAKS = 40
+FAKTOR_MELAMBAT = 1.6
+PENURUNAN_BERHASIL = 0.3
+
+
+def _median(nilai: list[int]) -> float:
+    urut = sorted(nilai)
+    tengah = len(urut) // 2
+    return urut[tengah] if len(urut) % 2 else (urut[tengah - 1] + urut[tengah]) / 2
+
+
+def deteksi_lelah(status: StatusAnak, sekarang: datetime) -> dict:
+    """Tanda anak sebaiknya berhenti untuk hari ini, dari pola sesi ini.
+
+    - sudah berlatih 15 menit atau 40 percobaan (anak SD cepat lelah berkonsentrasi);
+    - makin lambat: median waktu 5 percobaan terakhir minimal 1,6 kali 5 percobaan pertama;
+    - makin sering gagal: tingkat berhasil 10 percobaan terakhir turun 30 poin dari 10 pertama.
+    """
+    alasan = []
+    if status.sesi_mulai and sekarang - status.sesi_mulai >= LAMA_SESI_MAKS:
+        alasan.append("sudah berlatih 15 menit")
+    if len(status.hasil_sesi) >= PERCOBAAN_SESI_MAKS:
+        alasan.append(f"sudah {len(status.hasil_sesi)} percobaan")
+    d = status.durasi_sesi
+    if len(d) >= 10 and _median(d[-5:]) >= FAKTOR_MELAMBAT * max(_median(d[:5]), 1):
+        alasan.append("makin lama menjawab")
+    h = status.hasil_sesi
+    if len(h) >= 20 and sum(h[:10]) / 10 - sum(h[-10:]) / 10 >= PENURUNAN_BERHASIL:
+        alasan.append("makin sering gagal dibanding awal sesi")
+    return {"lelah": bool(alasan), "alasan": alasan}

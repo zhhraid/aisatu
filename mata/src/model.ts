@@ -19,6 +19,8 @@ export interface ModelBibir {
   jumlah: number[];
   /** Akurasi validasi silang saat dilatih (0 sampai 1), kalau dihitung. */
   akurasi?: number;
+  /** Berapa kali model diperbarui dari latihan setelah dilatih. */
+  pembaruan?: number;
 }
 
 /**
@@ -143,4 +145,30 @@ export function latihDanValidasi(contoh: Partial<Record<Bunyi, readonly Fitur[]>
 } {
   const validasi = validasiSilang(contoh);
   return { model: { ...latihModel(contoh), akurasi: Math.round(validasi.akurasi * 1000) / 1000 }, validasi };
+}
+
+/** Contoh baru hanya dipakai kalau model sudah yakin dan bentuknya dekat dengan yang dikenal. */
+export const PELUANG_BELAJAR_MIN = 0.8;
+export const JARAK_BELAJAR_MAKS = 2.5;
+/** Bobot contoh baru paling kecil 1/60: model berubah pelan, tidak terbawa satu percobaan. */
+const JENDELA_BELAJAR = 60;
+
+/**
+ * Belajar terus dari latihan: menggeser titik tengah satu bentuk ke arah contoh baru dari
+ * percobaan yang berhasil. Mengembalikan model baru, atau null kalau contoh ditolak (model
+ * belum yakin, atau bentuknya jauh dari yang dikenal) supaya model tidak belajar hal salah.
+ */
+export function perbaruiModel(model: ModelBibir, bunyi: Bunyi, f: Fitur): ModelBibir | null {
+  const k = model.kelas.indexOf(bunyi);
+  if (k < 0) return null;
+  const t = prediksi(model, f);
+  if (t.bunyi !== bunyi || (t.peluang[bunyi] ?? 0) < PELUANG_BELAJAR_MIN) return null;
+  const v = vektor(f);
+  const d = Math.sqrt(v.reduce((s, x, j) => s + ((x - model.pusat[k]![j]!) / model.skala[j]!) ** 2, 0));
+  if (d > JARAK_BELAJAR_MAKS) return null;
+  const n = (model.jumlah[k] ?? 0) + 1;
+  const bobot = 1 / Math.min(n, JENDELA_BELAJAR);
+  const pusat = model.pusat.map((p, i) => (i === k ? p.map((x, j) => x + bobot * (v[j]! - x)) : p));
+  const jumlah = model.jumlah.map((x, i) => (i === k ? n : x));
+  return { ...model, pusat, jumlah, pembaruan: (model.pembaruan ?? 0) + 1 };
 }

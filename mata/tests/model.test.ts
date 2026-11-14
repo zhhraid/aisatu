@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AMBANG_BAWAAN } from '../src/aturan';
 import { MatriksKebingungan, tebakAturan, tebakanTerbanyak, tebakModel } from '../src/evaluasi';
-import { bacaModel, JARAK_ASING, latihDanValidasi, latihModel, layakDipakai, prediksi, validasiSilang } from '../src/model';
+import { bacaModel, JARAK_ASING, latihDanValidasi, latihModel, layakDipakai, perbaruiModel, prediksi, validasiSilang } from '../src/model';
 import { Percobaan } from '../src/percobaan';
 import type { Bunyi, Fitur } from '../src/tipe';
 
@@ -139,5 +139,46 @@ describe('pengaman model', () => {
     expect(layakDipakai(buruk.model)).toBe(false);
     expect(layakDipakai(latihModel(contoh()))).toBe(false); // tanpa akurasi: tidak dipakai
     expect(layakDipakai(null)).toBe(false);
+  });
+});
+
+describe('model terus belajar dari latihan', () => {
+  it('contoh yang yakin dan dekat menggeser titik tengah pelan-pelan', () => {
+    const model = latihModel(contoh());
+    const geser: Fitur = { ...PUSAT.a, rahang: PUSAT.a.rahang + 0.02 };
+    const baru = perbaruiModel(model, 'a', geser)!;
+    expect(baru).not.toBeNull();
+    const k = model.kelas.indexOf('a');
+    expect(baru.pusat[k]![0]).toBeGreaterThan(model.pusat[k]![0]!);
+    expect(baru.pusat[k]![0]! - model.pusat[k]![0]!).toBeLessThan(0.002); // satu contoh: geser kecil
+    expect(baru.pusat[1]).toEqual(model.pusat[1]); // bentuk lain tidak berubah
+    expect([baru.pembaruan, baru.jumlah[k]]).toEqual([1, model.jumlah[k]! + 1]);
+  });
+
+  it('contoh yang bukan bentuk itu atau jauh dari yang dikenal ditolak', () => {
+    const model = latihModel(contoh());
+    expect(perbaruiModel(model, 'a', PUSAT.o)).toBeNull(); // model mengira "o"
+    const jauh: Fitur = { ...PUSAT.a, rahang: 0.6 };
+    expect(perbaruiModel(model, 'a', jauh)).toBeNull();
+    expect(perbaruiModel(model, 'H', PUSAT.a)).toBeNull(); // "h" bukan kelas model
+  });
+
+  it('banyak latihan membuat model mengikuti perubahan wajah anak', () => {
+    let model = latihModel(contoh());
+    const k = model.kelas.indexOf('a');
+    for (let i = 0; i < 200; i++) {
+      model = perbaruiModel(model, 'a', { ...PUSAT.a, rahang: PUSAT.a.rahang + 0.03 }) ?? model;
+    }
+    expect(model.pusat[k]![0]).toBeCloseTo(PUSAT.a.rahang + 0.03, 2);
+  });
+
+  it('percobaan bunyi tunggal yang berhasil menyertakan contoh bentuk', () => {
+    const p = new Percobaan(['a'], AMBANG_BAWAAN, { model: latihModel(contoh()) });
+    for (let i = 0, t = 0; i < 30 && !p.hasil(); i++, t += 50) p.proses({ t, fitur: PUSAT.a, suara: true });
+    expect(p.hasil()!.contoh!.rahang).toBeCloseTo(PUSAT.a.rahang);
+    const kata = new Percobaan(['M', 'a'], AMBANG_BAWAAN);
+    kata.proses({ t: 0, fitur: PUSAT.M, suara: false });
+    kata.proses({ t: 50, fitur: PUSAT.M, suara: false });
+    expect(kata.hasil()).toBeNull();
   });
 });

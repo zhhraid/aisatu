@@ -2,7 +2,7 @@ import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import { AMBANG_BAWAAN, type Ambang } from './aturan';
 import { ambilBlendshape, celahBibir, hitungFitur, posisiWajah } from './fitur';
 import { Kalibrasi, type HasilKalibrasi } from './kalibrasi';
-import type { ModelBibir } from './model';
+import { perbaruiModel, type ModelBibir } from './model';
 import { Percobaan, type HasilPercobaan, type Keadaan, type OpsiPercobaan } from './percobaan';
 import { DeteksiSuara, KENDALA_MIKROFON } from './suara';
 import type { Blendshape, Bunyi, Fitur, PosisiWajah } from './tipe';
@@ -218,6 +218,11 @@ export class Mata {
         const akhir = percobaan.hasil();
         if (akhir) {
           lepas();
+          // Model personal belajar terus dari bunyi tunggal yang berhasil.
+          if (akhir.berhasil && akhir.contoh && this.model && urutan.length === 1) {
+            const baru = perbaruiModel(this.model, urutan[0]!, akhir.contoh);
+            if (baru) this.model = baru;
+          }
           selesai(akhir);
         }
       });

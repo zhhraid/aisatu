@@ -14,8 +14,8 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 
 Sudah diuji:
 
-- Backend: 132 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
-- Mata: 63 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
+- Backend: 135 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
+- Mata: 67 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
 Belum diuji, dan harus kalian lakukan:
@@ -147,6 +147,7 @@ Jawabannya (contoh asli: kegagalan ketiga berturut-turut pada kata "bola", macet
 - `istirahat: true` = tampilkan animasi istirahat (setelah 3 gagal beruntun).
 - `tingkat_berhasil` kosong (`null`) selama sesi belum berisi 5 percobaan.
 - `streak` = jumlah hari berturut-turut berlatih menurut tanggal WIB; juga ada di jawaban `/peta`.
+- `lelah` = `{"lelah": true/false, "alasan": [...]}`: saran berhenti untuk hari ini kalau sesi sudah 15 menit atau 40 percobaan, anak makin lama menjawab (median 5 percobaan terakhir minimal 1,6 kali 5 pertama), atau makin sering gagal (turun 30 poin dari awal sesi). Kirim `durasi_ms` supaya tanda "makin lama" bisa dihitung. Tampilkan sebagai ajakan istirahat, bukan larangan.
 - Nama anak dikirim hanya ke endpoint teks (`{"nama": "Raka"}`) dan tidak diteruskan ke LLM.
 
 Nilai `alasan`: `zona` (pilihan biasa), `penguatan` (terlalu sering gagal, diberi yang mudah), `lebih_sulit` (terlalu sering berhasil), `lebih_mudah`, `turun_tingkat`, `ganti_bunyi`, `jelajah` (acak 1 dari 10), `ulang_tuntas`.
@@ -254,10 +255,11 @@ if (akhir) await kirim({ item_id: item.id, ...akhir });
 - Bibir rapat di dalam kata ("bu", "mo") dan bunyi yang dinilai dari mikrofon (h, desis, huruf lidah) tetap memakai aturan.
 - Model disimpan per anak lewat `PUT /ai/anak/{id}/model-bibir`, lalu dimuat lagi di sesi berikutnya.
 - Di aplikasi: `mata.model = layakDipakai(model) ? model : null`.
+- **Terus belajar:** setelah bunyi tunggal berhasil, `Mata` menggeser titik tengah bentuk itu ke arah contoh baru (bobot paling kecil 1/60). Contoh hanya dipakai kalau model sudah yakin (minimal 80%) dan bentuknya dekat dengan yang dikenal, supaya model tidak belajar hal salah. Simpan ulang model ke Otak sesekali (`pembaruan` mencatat jumlahnya).
 
 ### Uji akurasi
 
-Kartu **8. Uji akurasi** di halaman uji: pilih bentuk, tekan **Rekam**, buat bentuk itu 2 detik. Tiap rekaman dicatat sebagai tebakan aturan dan tebakan model personal (suara terbanyak dari tiap frame), lalu ditampilkan sebagai akurasi dan tabel kebingungan yang bisa disalin ke slide.
+Kartu **8. Uji akurasi** di halaman uji. Cara tercepat: tekan **Uji berpandu**; halaman memandu 7 bentuk × 3 putaran dalam urutan acak (sekitar 1,5 menit per orang). Atau pilih satu bentuk dan tekan **Rekam**, lalu buat bentuk itu 2 detik. Tiap rekaman dicatat sebagai tebakan aturan dan tebakan model personal (suara terbanyak dari tiap frame), lalu ditampilkan sebagai akurasi dan tabel kebingungan yang bisa disalin ke slide.
 
 ### Tutorial bibir a-z
 
