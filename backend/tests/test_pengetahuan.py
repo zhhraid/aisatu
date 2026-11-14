@@ -323,6 +323,10 @@ def test_endpoint_level_riwayat_dan_tanya(monkeypatch):
     jawab = k.post("/ai/anak/sinta/tanya", json={"nama": "Sinta", "pertanyaan": "Sinta lemah di mana?", "pembaca": "guru"}).json()
     assert jawab["sumber"] == "templat" and jawab["jawaban"].startswith("Sinta sekarang di Level 1")
     assert "u" in jawab["data"]["perlu_perhatian"]
+    # Bunyi yang sudah bisa di tahap bawah tapi masih dilatih di tahap atas disebut dengan tahapnya.
+    assert "u (tahap bunyi tunggal dengan bantuan gambar)" in jawab["data"]["sudah_bisa"]
+    assert "u (tahap bunyi tunggal)" in jawab["data"]["sedang_dilatih"]
+    assert "Sudah bisa: bunyi a (tahap bunyi tunggal)" in jawab["jawaban"]
     tolak = k.post("/ai/anak/sinta/tanya", json={"nama": "Sinta", "pertanyaan": "x", "pembaca": "guru"})
     assert tolak.status_code == 422  # pertanyaan terlalu pendek
 

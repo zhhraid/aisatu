@@ -22,6 +22,7 @@ from .kurikulum import (
     BUNYI,
     ITEM,
     ITEM_PER_ID,
+    NAMA_TAHAP,
     NAMA_TINGKAT,
     PARAM,
     TEKS_LABEL,
@@ -253,8 +254,16 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
         data = {
             "level": {"nomor": nomor, "nama": nama_lv},
             "level_tuntas": [x["level"] for x in lv["level"] if x["status"] == "tuntas"],
-            "sudah_bisa": [nama_b(b["bunyi"]) for b in baris if b["tingkat_tuntas"]],
-            "sedang_dilatih": [nama_b(b["bunyi"]) for b in baris if b["tingkat"] and b["label"] != "sudah_bisa"],
+            # Tahap ikut disebut: satu bunyi bisa "sudah bisa" di tahap bawah dan masih
+            # "sedang dilatih" di tahap atasnya; tanpa tahap, jawabannya terdengar bertentangan.
+            "sudah_bisa": [
+                f"{nama_b(b['bunyi'])} (tahap {NAMA_TAHAP[b['tingkat_tuntas']]})"
+                for b in baris if b["tingkat_tuntas"]
+            ],
+            "sedang_dilatih": [
+                f"{nama_b(b['bunyi'])} (tahap {NAMA_TAHAP[b['tingkat']]})"
+                for b in baris if b["tingkat"] and b["label"] != "sudah_bisa"
+            ],
             "perlu_perhatian": [nama_b(f["bunyi"]) for f in fokus],
             "alasan_perhatian": {nama_b(f["bunyi"]): f["alasan"] for f in fokus},
             "tren_bunyi": {nama_b(b): arah for b, arah in t["arah_bunyi"].items()},
