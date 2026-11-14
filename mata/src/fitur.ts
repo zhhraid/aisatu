@@ -59,6 +59,31 @@ export function celahBibir(daftar: readonly Titik[], lebar: number, tinggi: numb
   );
 }
 
+const SUDUT_BIBIR_KIRI = 61;
+const SUDUT_BIBIR_KANAN = 291;
+
+/**
+ * Kunci tambahan di data blendshape: lebar mulut (sudut ke sudut) dibagi lebar wajah.
+ * Disimpan bersama blendshape supaya ikut dirata-ratakan saat kalibrasi netral.
+ */
+export const KUNCI_LEBAR_MULUT = '_lebarMulut';
+
+/** Lebar mulut dibagi lebar wajah: tidak bergantung jarak ke kamera. */
+export function rasioLebarMulut(daftar: readonly Titik[], lebar: number, tinggi: number): number {
+  const wajah = jarak(titik(daftar, TEPI_KIRI), titik(daftar, TEPI_KANAN), lebar, tinggi);
+  if (wajah === 0) return 0;
+  return jarak(titik(daftar, SUDUT_BIBIR_KIRI), titik(daftar, SUDUT_BIBIR_KANAN), lebar, tinggi) / wajah;
+}
+
+/**
+ * Bibir yang mengerucut (u, o) membuat mulut menyempit jelas dari lebarnya saat diam.
+ * Penyempitan 20% dihitung setara kebulatan 0,4, karena mouthPucker/mouthFunnel dari
+ * MediaPipe sering kecil pada kamera laptop walaupun bibir sudah mengerucut.
+ */
+export const FAKTOR_SEMPIT = 2;
+/** Penyempitan mulut yang dianggap wajar per satuan rahang terbuka. */
+export const PENYEMPITAN_RAHANG = 0.25;
+
 /** Wajah cukup dekat dan cukup menghadap kamera untuk dinilai. */
 export function posisiWajah(daftar: readonly Titik[], lebar: number, tinggi: number): PosisiWajah {
   const tinggiWajah = jarak(titik(daftar, DAHI), titik(daftar, DAGU), lebar, tinggi);
@@ -69,13 +94,27 @@ export function posisiWajah(daftar: readonly Titik[], lebar: number, tinggi: num
   return rasio > MAKS_RASIO_MIRING ? 'miring' : 'ok';
 }
 
+/** Seberapa menyempit mulut dibanding saat netral (0 = sama, 0,2 = 20% lebih sempit). */
+function sempit(kini: Blendshape, netral: Blendshape): number {
+  const k = kini[KUNCI_LEBAR_MULUT];
+  const n = netral[KUNCI_LEBAR_MULUT];
+  if (!k || !n) return 0;
+  return Math.max(0, (n - k) / n);
+}
+
 /** Menghitung lima fitur dari blendshape saat ini, blendshape netral, dan celah bibir. */
 export function hitungFitur(kini: Blendshape, netral: Blendshape, celah: number): Fitur {
   const d = (nama: string) => (kini[nama] ?? 0) - (netral[nama] ?? 0);
   const rata = (a: string, b: string) => (d(a) + d(b)) / 2;
   return {
     rahang: d('jawOpen'),
-    bulat: Math.max(d('mouthPucker'), d('mouthFunnel')),
+    bulat: Math.max(
+      d('mouthPucker'),
+      d('mouthFunnel'),
+      // Rahang yang terbuka lebar ("a") juga menarik sudut bibir sedikit ke dalam; bagian
+      // itu tidak dihitung sebagai membulat.
+      Math.max(0, sempit(kini, netral) - PENYEMPITAN_RAHANG * Math.max(0, d('jawOpen'))) * FAKTOR_SEMPIT,
+    ),
     lebar: Math.max(
       rata('mouthSmileLeft', 'mouthSmileRight'),
       rata('mouthStretchLeft', 'mouthStretchRight'),

@@ -41,7 +41,8 @@ export const AMBANG_BAWAAN: Ambang = {
   // rahangMaks 0,15 (bukan 0,12): pada uji wajah asli, "i" yang diucapkan biasa dikira "e".
   i: { lebarMin: 0.15, rahangMaks: 0.15, bulatMaks: 0.15 },
   // "u": paling membulat, rahang hampir tertutup.
-  u: { bulatMin: 0.35, rahangMaks: 0.12 },
+  // bulatMin 0,30 (bukan 0,35): pada uji di aplikasi, "u" yang benar sulit lolos.
+  u: { bulatMin: 0.3, rahangMaks: 0.12 },
   // "o": membulat dengan rahang terbuka sedang, di antara "u" dan "a".
   o: { bulatMin: 0.25, rahangMin: 0.12, rahangMaks: 0.45 },
   // Bibir rapat: celah hampir nol, tidak membulat (bukan "u"), tidak melebar (bukan "i").

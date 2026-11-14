@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AMBANG_BAWAAN, cekTumpang, kemiripan, medianFitur, nilaiBentuk, setelOtomatis, urutanDariTeks,
 } from '../src/aturan';
-import { ambilBlendshape, celahBibir, hitungFitur, posisiWajah } from '../src/fitur';
+import { ambilBlendshape, celahBibir, hitungFitur, posisiWajah, rasioLebarMulut } from '../src/fitur';
 import { Kalibrasi } from '../src/kalibrasi';
 import { hitungBintang, Percobaan, type FramePercobaan } from '../src/percobaan';
 import { hitungRms, hitungZcr, PenentuSuara } from '../src/suara';
@@ -585,5 +585,45 @@ describe('huruf lidah dinilai sebagian', () => {
   it('batasnya jujur: t dan k tidak bisa dibedakan', () => {
     expect(urutanDariTeks('t')).toEqual(urutanDariTeks('k'));
     expect(urutanDariTeks('l')).toEqual(urutanDariTeks('r'));
+  });
+});
+
+describe('kebulatan dari penyempitan mulut', () => {
+  const NETRAL = { jawOpen: 0.05, mouthPucker: 0.05, _lebarMulut: 0.4 };
+
+  it('mulut yang menyempit 20% terbaca membulat walau mouthPucker kecil', () => {
+    const u = { jawOpen: 0.07, mouthPucker: 0.08, _lebarMulut: 0.32 };
+    const f = hitungFitur(u, NETRAL, 0.01);
+    expect(f.bulat).toBeCloseTo(0.39, 2);
+    expect(nilaiBentuk('u', f).cocok).toBe(true);
+  });
+
+  it('mulut yang melebar ("i") tidak terbaca membulat', () => {
+    const i = { jawOpen: 0.08, mouthSmileLeft: 0.3, mouthSmileRight: 0.3, _lebarMulut: 0.46 };
+    expect(hitungFitur(i, NETRAL, 0.02).bulat).toBeCloseTo(0, 5);
+  });
+
+  it('penyempitan karena rahang terbuka lebar ("a") tidak dihitung membulat', () => {
+    const a = { jawOpen: 0.55, mouthPucker: 0.05, _lebarMulut: 0.36 };
+    const f = hitungFitur(a, NETRAL, 0.15);
+    expect(f.bulat).toBeLessThan(AMBANG_BAWAAN.a.bulatMaks);
+    expect(nilaiBentuk('a', f).cocok).toBe(true);
+  });
+
+  it('tanpa data lebar mulut, kebulatan tetap dari blendshape', () => {
+    expect(hitungFitur({ mouthPucker: 0.5 }, {}, 0).bulat).toBeCloseTo(0.5);
+  });
+
+  it('rasio lebar mulut tidak bergantung jarak ke kamera', () => {
+    const titik = (skala: number) => {
+      const t: Titik[] = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.5 }));
+      Object.assign(t, {
+        234: { x: 0.5 - 0.2 * skala, y: 0.5 }, 454: { x: 0.5 + 0.2 * skala, y: 0.5 },
+        61: { x: 0.5 - 0.08 * skala, y: 0.6 }, 291: { x: 0.5 + 0.08 * skala, y: 0.6 },
+      });
+      return t;
+    };
+    expect(rasioLebarMulut(titik(1), 640, 480)).toBeCloseTo(0.4);
+    expect(rasioLebarMulut(titik(0.5), 640, 480)).toBeCloseTo(0.4);
   });
 });

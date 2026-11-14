@@ -1,6 +1,6 @@
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import { AMBANG_BAWAAN, type Ambang } from './aturan';
-import { ambilBlendshape, celahBibir, hitungFitur, posisiWajah } from './fitur';
+import { ambilBlendshape, celahBibir, hitungFitur, KUNCI_LEBAR_MULUT, posisiWajah, rasioLebarMulut } from './fitur';
 import { Kalibrasi, type HasilKalibrasi } from './kalibrasi';
 import { perbaruiModel, type ModelBibir } from './model';
 import { Percobaan, type HasilPercobaan, type Keadaan, type OpsiPercobaan } from './percobaan';
@@ -170,7 +170,10 @@ export class Mata {
       const tinggi = video.videoHeight;
       posisi = posisiWajah(titik, lebar, tinggi);
       if (posisi === 'ok') {
-        this.blendTerakhir = ambilBlendshape(kategori);
+        this.blendTerakhir = {
+          ...ambilBlendshape(kategori),
+          [KUNCI_LEBAR_MULUT]: rasioLebarMulut(titik, lebar, tinggi),
+        };
         fitur = hitungFitur(this.blendTerakhir, this.netral, celahBibir(titik, lebar, tinggi));
       }
     }

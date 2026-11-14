@@ -42,3 +42,19 @@ dua bunyi dengan batas baru. Perubahan ini belum diuji ulang dengan wajah asli.
 > validasinya minimal 80%. Belum diuji pada anak tunarungu."
 
 Jangan sebut "akurasi 71%" tanpa keterangan jumlah dan siapa pengujinya.
+
+## Uji di aplikasi tim, 14 November 2026
+
+Saat penilai dipasang di layar "Mari Berlatih", bentuk "u" dan "o" sulit lolos walau bibir sudah
+mengerucut (contoh: kemiripan 41% dengan petunjuk "kerucutkan bibir"). Penyebabnya, kebulatan
+hanya dibaca dari `mouthPucker` dan `mouthFunnel` MediaPipe, yang sering kecil pada kamera laptop.
+
+Perbaikan:
+
+- Kebulatan kini juga dibaca dari **penyempitan mulut**: jarak sudut bibir kiri-kanan dibagi
+  lebar wajah, dibanding saat netral. Penyempitan 20% setara kebulatan 0,4.
+- Penyempitan yang wajar karena rahang terbuka ("a") dikurangi, supaya "a" tidak terbaca membulat.
+- Batas kebulatan "u" diturunkan 0,35 → 0,30.
+
+Belum diuji ulang dengan wajah asli. Untuk tiap anak, Setel otomatis dan model personal tetap cara
+paling andal menyesuaikan penilai dengan wajahnya.
