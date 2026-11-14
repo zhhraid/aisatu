@@ -21,7 +21,7 @@ def llm_palsu(jawaban):
 
 def usulan_contoh():
     s = otak.StatusAnak()
-    for b in ("a", "i", "u", "o", "M"):
+    for b in ("a", "i", "u", "o", "m"):
         for _ in range(3):
             otak.catat_percobaan(s, ITEM_PER_ID[f"t1-{b}"], True, 1, T0)
             otak.catat_percobaan(s, ITEM_PER_ID[f"t2-{b}"], True, 1, T0)
@@ -86,7 +86,7 @@ def test_alasan_dengan_angka_ditolak():
 def test_ringkasan_kelas_templat_dan_llm():
     anak = [
         {"nama": "Raka", "macet": ["u"], "naik": []},
-        {"nama": "Sinta", "macet": [], "naik": ["a", "M"]},
+        {"nama": "Sinta", "macet": [], "naik": ["a", "m"]},
     ]
     templat = asyncio.run(mulut.ringkasan_kelas(anak, llm_palsu(None)))
     assert templat["sumber"] == "templat"
@@ -221,7 +221,7 @@ def test_tugas_laporan_dan_ringkasan_tanpa_llm_memakai_templat(klien):
 
 def test_kurikulum_dan_status(klien):
     kurikulum = klien.get("/ai/kurikulum").json()
-    assert kurikulum["bunyi"] == ["a", "i", "u", "o", "M", "e", "F", "H", "S", "T"]
+    assert kurikulum["bunyi"] == ["a", "i", "u", "o", "m", "e", "f", "h", "s", "t"]
     assert len(kurikulum["item"]) == 2 * 10 + 41 + 37  # bunyi di tingkat 1-2, suku kata, kata
     sebagian = {it["teks"] for it in kurikulum["item"] if it["dinilai_sebagian"]}
     assert "bola" in sebagian and "mama" not in sebagian and "s" in sebagian

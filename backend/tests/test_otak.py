@@ -44,19 +44,19 @@ def test_luruh_setengah_selisih_setelah_satu_paruh():
 @pytest.mark.parametrize(
     "teks, urutan",
     [
-        ("bola", ("M", "o", "T", "a")),
-        ("mama", ("M", "a", "M", "a")),
-        ("buku", ("M", "u", "T", "u")),
-        ("ibu", ("i", "M", "u")),
-        ("susu", ("S", "u", "S", "u")),
-        ("anggur", ("a", "T", "u", "T")),  # "ngg" digabung jadi satu bunyi lidah
-        ("mobil", ("M", "o", "M", "i", "T")),
+        ("bola", ("m", "o", "t", "a")),
+        ("mama", ("m", "a", "m", "a")),
+        ("buku", ("m", "u", "t", "u")),
+        ("ibu", ("i", "m", "u")),
+        ("susu", ("s", "u", "s", "u")),
+        ("anggur", ("a", "t", "u", "t")),  # "ngg" digabung jadi satu bunyi lidah
+        ("mobil", ("m", "o", "m", "i", "t")),
         # Bentuk baru: e, f/v, h, dan w/y yang dinilai sebagai u/i.
-        ("meja", ("M", "e", "S", "a")),
-        ("maaf", ("M", "a", "F")),
-        ("wahyu", ("u", "a", "H", "i", "u")),
-        ("ayah", ("a", "i", "a", "H")),
-        ("hiu", ("H", "i", "u")),
+        ("meja", ("m", "e", "s", "a")),
+        ("maaf", ("m", "a", "f")),
+        ("wahyu", ("u", "a", "h", "i", "u")),
+        ("ayah", ("a", "i", "a", "h")),
+        ("hiu", ("h", "i", "u")),
         ("ayo", ("a", "i", "o")),
     ],
 )
@@ -94,9 +94,9 @@ def test_tingkat_dua_terbuka_setelah_prasyarat():
 def test_kemunduran_di_tingkat_bawah_tidak_mengunci_tingkat_yang_sudah_berjalan():
     s = otak.StatusAnak()
     s.kc[("u", 2)] = otak.KC(p=0.40, n=6, terakhir=T0)  # mundur di tingkat 2
-    s.kc[("M", 2)] = otak.KC(p=0.97, n=4, terakhir=T0, tuntas=True)
+    s.kc[("m", 2)] = otak.KC(p=0.97, n=4, terakhir=T0, tuntas=True)
     s.kc[("u", 3)] = otak.KC(p=0.80, n=4, terakhir=T0)  # tapi sudah berjalan di tingkat 3
-    s.kc[("M", 3)] = otak.KC(p=0.80, n=4, terakhir=T0)
+    s.kc[("m", 3)] = otak.KC(p=0.80, n=4, terakhir=T0)
     assert otak.prasyarat_terpenuhi(s, ITEM_PER_ID["t3-mu"], T0)
     pilihan = otak.pilih_berikutnya(s, T0)
     assert otak.prasyarat_terpenuhi(s, pilihan.item, T0)
@@ -106,14 +106,14 @@ def test_kata_gagal_hanya_mengubah_bunyi_yang_lewat_dan_yang_macet():
     s = otak.StatusAnak()
     perubahan = catat(s, "t4-bola", False, langkah=1)  # M lewat, macet di o, a belum sampai
     hasil = {p["bunyi"]: p["berhasil"] for p in perubahan}
-    assert hasil == {"M": True, "o": False}
+    assert hasil == {"m": True, "o": False}
     assert ("a", 4) not in s.kc
 
 
 def test_bunyi_yang_macet_tidak_dihitung_berhasil_walau_pernah_lewat():
     s = otak.StatusAnak()
     perubahan = catat(s, "t4-mama", False, langkah=2)  # M, a lewat, macet di M kedua
-    assert {p["bunyi"]: p["berhasil"] for p in perubahan} == {"a": True, "M": False}
+    assert {p["bunyi"]: p["berhasil"] for p in perubahan} == {"a": True, "m": False}
 
 
 def test_langkah_di_luar_rentang_tidak_membuat_galat():
@@ -326,7 +326,7 @@ def test_tugas_mendahulukan_yang_pernah_dilatih_daripada_materi_baru():
 def test_tugas_mengutamakan_bunyi_yang_mulai_lupa_dan_tidak_melampaui_tingkat_anak():
     s = otak.StatusAnak()
     lama = T0 - timedelta(days=10)
-    for b in ("a", "i", "u", "o", "M"):
+    for b in ("a", "i", "u", "o", "m"):
         for _ in range(3):
             catat(s, f"t1-{b}", True, waktu=T0 if b != "o" else lama)
     usulan = otak.usul_tugas(s, T0)
@@ -366,7 +366,7 @@ def test_kata_dengan_h_baru_terbuka_setelah_h_dilatih_di_suku_kata():
     for b in ("i", "u"):
         s.kc[(b, 3)] = otak.KC(p=0.9, n=5, terakhir=T0)
     assert not otak.prasyarat_terpenuhi(s, hiu, T0)  # h belum dilatih
-    s.kc[("H", 3)] = otak.KC(p=0.9, n=5, terakhir=T0)
+    s.kc[("h", 3)] = otak.KC(p=0.9, n=5, terakhir=T0)
     assert otak.prasyarat_terpenuhi(s, hiu, T0)
 
 
@@ -408,7 +408,7 @@ def test_level_berikutnya_terbuka_setelah_40_persen_dan_tuntas_dapat_3_bintang()
 
 def test_level_yang_pernah_dilatih_tetap_terbuka():
     s = otak.StatusAnak()
-    catat(s, "t1-M", True)  # misalnya guru membuka latihan m lebih dulu
+    catat(s, "t1-m", True)  # misalnya guru membuka latihan m lebih dulu
     peta = {lv["level"]: lv["status"] for lv in otak.status_level(s, T0)["level"]}
     assert peta[3] == "terbuka" and peta[2] == "terkunci"
 

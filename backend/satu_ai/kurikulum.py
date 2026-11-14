@@ -6,15 +6,15 @@ Bank kata adalah usulan; cocokkan dengan buku guru sebelum dipakai.
 
 from dataclasses import dataclass
 
-# "M" = bibir mengatup (m, b, p).
-# Bentuk yang dinilai. "M" = bibir menutup (m, b, p), "F" = gigi dan bibir (f, v),
-# "H" = hembusan napas (h, dari mikrofon). w dinilai sebagai "u", y sebagai "i".
+# "m" = bibir mengatup (m, b, p).
+# Bentuk yang dinilai. "m" = bibir menutup (m, b, p), "f" = gigi dan bibir (f, v),
+# "h" = hembusan napas (h, dari mikrofon). w dinilai sebagai "u", y sebagai "i".
 # Huruf yang dibentuk lidah dinilai SEBAGIAN (posisi mulut dan suaranya, bukan lidah):
-# "S" = desis (s, c, x, z, j), "T" = huruf lidah lain (t, d, n, l, r, k, g, q).
-BUNYI: tuple[str, ...] = ("a", "i", "u", "o", "M", "e", "F", "H", "S", "T")
+# "s" = desis (s, c, x, z, j), "t" = huruf lidah lain (t, d, n, l, r, k, g, q).
+BUNYI: tuple[str, ...] = ("a", "i", "u", "o", "m", "e", "f", "h", "s", "t")
 
 # Bunyi yang hanya dinilai sebagian: kamera tidak bisa melihat lidah.
-DINILAI_SEBAGIAN: frozenset[str] = frozenset({"S", "T"})
+DINILAI_SEBAGIAN: frozenset[str] = frozenset({"s", "t"})
 TINGKAT: tuple[int, ...] = (1, 2, 3, 4)
 
 NAMA_TINGKAT = {
@@ -52,18 +52,18 @@ PARUH_LUPA_HARI = 30.0  # asumsi: tanpa latihan, separuh kemajuan hilang dalam s
 
 _BENTUK_HURUF = {
     "a": "a", "i": "i", "u": "u", "e": "e", "o": "o",
-    "m": "M", "b": "M", "p": "M",
-    "f": "F", "v": "F",
+    "m": "m", "b": "m", "p": "m",
+    "f": "f", "v": "f",
     "w": "u", "y": "i",
-    "h": "H",
-    "s": "S", "c": "S", "x": "S", "z": "S", "j": "S",
-    "t": "T", "d": "T", "n": "T", "l": "T", "r": "T", "k": "T", "g": "T", "q": "T",
+    "h": "h",
+    "s": "s", "c": "s", "x": "s", "z": "s", "j": "s",
+    "t": "t", "d": "t", "n": "t", "l": "t", "r": "t", "k": "t", "g": "t", "q": "t",
 }
 
 
 def urutan_dari_teks(teks: str) -> tuple[str, ...]:
     """Urutan bentuk yang dinilai. Dua bentuk sama yang berurutan digabung
-    (misalnya "ng" menjadi satu "T")."""
+    (misalnya "ng" menjadi satu "t")."""
     hasil: list[str] = []
     for huruf in teks.lower():
         bentuk = _BENTUK_HURUF.get(huruf)
@@ -116,8 +116,8 @@ class Level:
 LEVEL: tuple[Level, ...] = (
     Level(1, "Vokal a, i, u", ("a", "i", "u"), (1, 2)),
     Level(2, "Vokal e, o", ("e", "o"), (1, 2)),
-    Level(3, "Konsonan bibir: m/b/p dan f/v", ("M", "F"), (1, 2)),
-    Level(4, "Hembusan h, desis, dan huruf lidah", ("H", "S", "T"), (1, 2)),
+    Level(3, "Konsonan bibir: m/b/p dan f/v", ("m", "f"), (1, 2)),
+    Level(4, "Hembusan h, desis, dan huruf lidah", ("h", "s", "t"), (1, 2)),
     Level(5, "Suku kata", BUNYI, (3,)),
     Level(6, "Kata", BUNYI, (4,)),
 )
@@ -150,7 +150,7 @@ BANK_KATA = (
 )
 
 _TEKS_BUNYI = {
-    "a": "a", "i": "i", "u": "u", "o": "o", "M": "m", "e": "e", "F": "f", "H": "h", "S": "s", "T": "t",
+    "a": "a", "i": "i", "u": "u", "o": "o", "m": "m", "e": "e", "f": "f", "h": "h", "s": "s", "t": "t",
 }
 
 

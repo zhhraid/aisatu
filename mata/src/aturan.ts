@@ -9,18 +9,18 @@ export interface Ambang {
   i: { lebarMin: number; rahangMaks: number; bulatMaks: number };
   u: { bulatMin: number; rahangMaks: number };
   o: { bulatMin: number; rahangMin: number; rahangMaks: number };
-  M: {
+  m: {
     celahMaks: number; rahangMaks: number; tekanMin: number; bulatMaks: number; lebarMaks: number;
     gulungMaks: number;
   };
   e: { rahangMin: number; rahangMaks: number; bulatMaks: number };
-  F: { gulungMin: number; rahangMaks: number; bulatMaks: number; lebarMaks: number };
+  f: { gulungMin: number; rahangMaks: number; bulatMaks: number; lebarMaks: number };
   /** "h": mulut tidak tertutup; sisanya dinilai dari hembusan napas di mikrofon. */
-  H: { celahMin: number };
+  h: { celahMin: number };
   /** Desis (s, c, x, z, j): gigi hampir rapat, bibir sedikit terbuka; plus desis di mikrofon. */
-  S: { rahangMaks: number; bulatMaks: number; celahMin: number };
+  s: { rahangMaks: number; bulatMaks: number; celahMin: number };
   /** Huruf lidah (t, d, n, l, r, k, g, q): mulut sedikit terbuka; plus ada bunyi. */
-  T: { celahMin: number; rahangMaks: number };
+  t: { celahMin: number; rahangMaks: number };
 }
 
 /**
@@ -49,16 +49,16 @@ export const AMBANG_BAWAAN: Ambang = {
   // "o": membulat dengan rahang terbuka sedang, di antara "u" dan "a".
   o: { bulatMin: 0.15, rahangMin: 0.12, rahangMaks: 0.45 },
   // Bibir rapat: celah hampir nol, tidak membulat (bukan "u"), tidak melebar (bukan "i").
-  M: { celahMaks: 0.02, rahangMaks: 0.15, tekanMin: 0, bulatMaks: 0.15, lebarMaks: 0.15, gulungMaks: 0.12 },
+  m: { celahMaks: 0.02, rahangMaks: 0.15, tekanMin: 0, bulatMaks: 0.15, lebarMaks: 0.15, gulungMaks: 0.12 },
   // "e": rahang terbuka sedang, di antara "i" (hampir tertutup) dan "a" (lebar), tidak membulat.
   e: { rahangMin: 0.15, rahangMaks: 0.3, bulatMaks: 0.15 },
   // "f/v": bibir bawah tergulung ke bawah gigi atas, rahang hampir tertutup.
   // gulungMin 0,12 (bukan 0,2): pada uji wajah asli, "f" dikira bibir rapat.
-  F: { gulungMin: 0.12, rahangMaks: 0.15, bulatMaks: 0.15, lebarMaks: 0.15 },
-  H: { celahMin: 0.02 },
+  f: { gulungMin: 0.12, rahangMaks: 0.15, bulatMaks: 0.15, lebarMaks: 0.15 },
+  h: { celahMin: 0.02 },
   // Dinilai sebagian: hanya posisi mulut yang terlihat, bukan lidah.
-  S: { rahangMaks: 0.15, bulatMaks: 0.35, celahMin: 0.005 },
-  T: { celahMin: 0.01, rahangMaks: 0.35 },
+  s: { rahangMaks: 0.15, bulatMaks: 0.35, celahMin: 0.005 },
+  t: { celahMin: 0.01, rahangMaks: 0.35 },
 };
 
 export type Petunjuk =
@@ -136,8 +136,8 @@ export function nilaiBentuk(
       if (f.rahang > t.rahangMaks) return kurang('tutup_sedikit');
       return COCOK;
     }
-    case 'M': {
-      const t = ambang.M;
+    case 'm': {
+      const t = ambang.m;
       // rahangMaks eksklusif: angka yang sama adalah rahangMin "e".
       if (f.celah > t.celahMaks || f.rahang >= t.rahangMaks || f.tekan < t.tekanMin) {
         return kurang('rapatkan');
@@ -155,27 +155,27 @@ export function nilaiBentuk(
       if (f.bulat >= t.bulatMaks) return kurang('jangan_bulatkan');
       return COCOK;
     }
-    case 'F': {
-      const t = ambang.F;
+    case 'f': {
+      const t = ambang.f;
       if ((f.gulung ?? 0) < t.gulungMin) return kurang('gigi_ke_bibir');
       if (f.rahang >= t.rahangMaks) return kurang('tutup_sedikit');
       if (f.bulat >= t.bulatMaks) return kurang('jangan_bulatkan');
       if (f.lebar >= t.lebarMaks) return kurang('gigi_ke_bibir');
       return COCOK;
     }
-    case 'H': {
-      if (f.celah < ambang.H.celahMin) return kurang('buka_mulut');
+    case 'h': {
+      if (f.celah < ambang.h.celahMin) return kurang('buka_mulut');
       return COCOK;
     }
-    case 'S': {
-      const t = ambang.S;
+    case 's': {
+      const t = ambang.s;
       if (f.rahang >= t.rahangMaks) return kurang('gigi_rapat');
       if (f.celah < t.celahMin) return kurang('gigi_rapat');
       if (f.bulat >= t.bulatMaks) return kurang('jangan_bulatkan');
       return COCOK;
     }
-    case 'T': {
-      const t = ambang.T;
+    case 't': {
+      const t = ambang.t;
       if (f.celah < t.celahMin) return kurang('buka_mulut');
       if (f.rahang >= t.rahangMaks) return kurang('tutup_sedikit');
       return COCOK;
@@ -231,14 +231,14 @@ export function kemiripan(
         dekatMaks(f.rahang, ambang.o.rahangMaks),
       ];
       break;
-    case 'M':
+    case 'm':
       bagian = [
-        dekatMaks(f.celah, ambang.M.celahMaks),
-        dekatMaks(f.rahang, ambang.M.rahangMaks),
-        dekatMin(f.tekan, ambang.M.tekanMin),
-        dalamKata ? 1 : dekatMaks(f.bulat, ambang.M.bulatMaks),
-        dalamKata ? 1 : dekatMaks(f.lebar, ambang.M.lebarMaks),
-        dekatMaks(f.gulung ?? 0, ambang.M.gulungMaks),
+        dekatMaks(f.celah, ambang.m.celahMaks),
+        dekatMaks(f.rahang, ambang.m.rahangMaks),
+        dekatMin(f.tekan, ambang.m.tekanMin),
+        dalamKata ? 1 : dekatMaks(f.bulat, ambang.m.bulatMaks),
+        dalamKata ? 1 : dekatMaks(f.lebar, ambang.m.lebarMaks),
+        dekatMaks(f.gulung ?? 0, ambang.m.gulungMaks),
       ];
       break;
     case 'e':
@@ -248,26 +248,26 @@ export function kemiripan(
         dekatMaks(f.bulat, ambang.e.bulatMaks),
       ];
       break;
-    case 'F':
+    case 'f':
       bagian = [
-        dekatMin(f.gulung ?? 0, ambang.F.gulungMin),
-        dekatMaks(f.rahang, ambang.F.rahangMaks),
-        dekatMaks(f.bulat, ambang.F.bulatMaks),
-        dekatMaks(f.lebar, ambang.F.lebarMaks),
+        dekatMin(f.gulung ?? 0, ambang.f.gulungMin),
+        dekatMaks(f.rahang, ambang.f.rahangMaks),
+        dekatMaks(f.bulat, ambang.f.bulatMaks),
+        dekatMaks(f.lebar, ambang.f.lebarMaks),
       ];
       break;
-    case 'H':
-      bagian = [dekatMin(f.celah, ambang.H.celahMin)];
+    case 'h':
+      bagian = [dekatMin(f.celah, ambang.h.celahMin)];
       break;
-    case 'S':
+    case 's':
       bagian = [
-        dekatMaks(f.rahang, ambang.S.rahangMaks),
-        dekatMin(f.celah, ambang.S.celahMin),
-        dekatMaks(f.bulat, ambang.S.bulatMaks),
+        dekatMaks(f.rahang, ambang.s.rahangMaks),
+        dekatMin(f.celah, ambang.s.celahMin),
+        dekatMaks(f.bulat, ambang.s.bulatMaks),
       ];
       break;
-    case 'T':
-      bagian = [dekatMin(f.celah, ambang.T.celahMin), dekatMaks(f.rahang, ambang.T.rahangMaks)];
+    case 't':
+      bagian = [dekatMin(f.celah, ambang.t.celahMin), dekatMaks(f.rahang, ambang.t.rahangMaks)];
       break;
   }
   // Rata-rata geometris: satu syarat yang jauh meleset menurunkan nilai, tidak
@@ -282,17 +282,17 @@ export function kemiripan(
 
 const BENTUK_HURUF: Record<string, Bunyi> = {
   a: 'a', i: 'i', u: 'u', e: 'e', o: 'o',
-  m: 'M', b: 'M', p: 'M',
-  f: 'F', v: 'F',
+  m: 'm', b: 'm', p: 'm',
+  f: 'f', v: 'f',
   w: 'u', y: 'i',
-  h: 'H',
-  s: 'S', c: 'S', x: 'S', z: 'S', j: 'S',
-  t: 'T', d: 'T', n: 'T', l: 'T', r: 'T', k: 'T', g: 'T', q: 'T',
+  h: 'h',
+  s: 's', c: 's', x: 's', z: 's', j: 's',
+  t: 't', d: 't', n: 't', l: 't', r: 't', k: 't', g: 't', q: 't',
 };
 
 /**
  * Urutan bentuk yang dinilai dari sebuah kata. Dua bentuk sama yang berurutan digabung
- * ("ng" menjadi satu "T"). Sama dengan aturan di backend.
+ * ("ng" menjadi satu "t"). Sama dengan aturan di backend.
  */
 export function urutanDariTeks(teks: string): Bunyi[] {
   const hasil: Bunyi[] = [];
@@ -307,7 +307,7 @@ export function urutanDariTeks(teks: string): Bunyi[] {
 
 /**
  * Pasangan bunyi yang bisa lolos bersamaan untuk bentuk bibir yang sama, dicari di
- * seluruh ruang angka. Kosong berarti ambangnya aman. "H" tidak ikut, karena dibedakan
+ * seluruh ruang angka. Kosong berarti ambangnya aman. "h" tidak ikut, karena dibedakan
  * dari hembusan napas, bukan dari bentuk bibir.
  */
 export function cekTumpang(ambang: Ambang = AMBANG_BAWAAN): [Bunyi, Bunyi][] {
@@ -356,8 +356,8 @@ const JARAK_MIN_CELAH = 0.008;
  * ada dua bentuk yang terlalu mirip, tidak ada yang diubah dan masalahnya dilaporkan,
  * supaya penguji bisa mengulang bentuk itu dengan lebih jelas.
  */
-export function setelOtomatis(contoh: Record<Exclude<Bunyi, 'H' | 'S' | 'T'>, Fitur>): HasilSetel {
-  const { a, i, u, o, M, e, F } = contoh;
+export function setelOtomatis(contoh: Record<Exclude<Bunyi, 'h' | 's' | 't'>, Fitur>): HasilSetel {
+  const { a, i, u, o, m: M, e, f: F } = contoh;
   const g = (f: Fitur) => f.gulung ?? 0;
   const masalah: string[] = [];
   const syarat = (benar: boolean, pesan: string) => {
@@ -397,7 +397,7 @@ export function setelOtomatis(contoh: Record<Exclude<Bunyi, 'H' | 'S' | 'T'>, Fi
     u: { bulatMin: maks(tengah(maks(...rata.map((f) => f.bulat)), u.bulat), batasBulat), rahangMaks: batasRahangUo },
     // Batas atas "o" longgar: "o" yang terbuka lebar tetap dibedakan dari "a" oleh kebulatan.
     o: { bulatMin: batasBulat, rahangMin: batasRahangUo, rahangMaks: maks(o.rahang + 0.2, a.rahang) },
-    M: {
+    m: {
       celahMaks: tengah(M.celah, min(a.celah, o.celah, e.celah)),
       rahangMaks: min(maks(M.rahang + 0.1, 0.1), batasRahangTutup),
       tekanMin: 0,
@@ -406,10 +406,10 @@ export function setelOtomatis(contoh: Record<Exclude<Bunyi, 'H' | 'S' | 'T'>, Fi
       gulungMaks: batasGulung,
     },
     e: { rahangMin: batasRahangTutup, rahangMaks: batasRahangEa, bulatMaks: batasBulat },
-    F: { gulungMin: batasGulung, rahangMaks: batasRahangTutup, bulatMaks: batasBulat, lebarMaks: batasLebar },
-    H: { ...AMBANG_BAWAAN.H },
-    S: { ...AMBANG_BAWAAN.S },
-    T: { ...AMBANG_BAWAAN.T },
+    f: { gulungMin: batasGulung, rahangMaks: batasRahangTutup, bulatMaks: batasBulat, lebarMaks: batasLebar },
+    h: { ...AMBANG_BAWAAN.h },
+    s: { ...AMBANG_BAWAAN.s },
+    t: { ...AMBANG_BAWAAN.t },
   };
   const tumpang = cekTumpang(ambang);
   if (tumpang.length) {

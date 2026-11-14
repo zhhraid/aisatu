@@ -29,7 +29,7 @@ export const PELUANG_MODEL_MIN = 0.6;
 
 const PETUNJUK_BAWAAN: Partial<Record<Bunyi, Petunjuk>> = {
   a: 'buka_lebar', i: 'tarik_samping', u: 'kerucutkan', o: 'bulatkan',
-  M: 'rapatkan', e: 'buka_sedikit', F: 'gigi_ke_bibir',
+  m: 'rapatkan', e: 'buka_sedikit', f: 'gigi_ke_bibir',
 };
 
 export const OPSI_PERCOBAAN: OpsiPercobaan = {
@@ -126,7 +126,7 @@ export class Percobaan {
   private butuhTahan(target: Bunyi): number {
     if (this.tunggal) return this.opsi.tahanTunggalMs;
     // Bibir rapat dan huruf lidah (t, k, d) sangat singkat di dalam kata.
-    return target === 'M' || target === 'T' ? this.opsi.tahanKatupMs : this.opsi.tahanVokalMs;
+    return target === 'm' || target === 't' ? this.opsi.tahanKatupMs : this.opsi.tahanVokalMs;
   }
 
   private keadaan(cocok: boolean, suara: boolean, petunjuk: Keadaan['petunjuk']): Keadaan {
@@ -150,7 +150,7 @@ export class Percobaan {
   private nilai(target: Bunyi, f: Fitur): { bentuk: Penilaian; mirip: number } {
     const dalamKata = !this.tunggal;
     const model = this.opsi.model;
-    const pakaiModel = model && model.kelas.includes(target) && !(target === 'M' && dalamKata);
+    const pakaiModel = model && model.kelas.includes(target) && !(target === 'm' && dalamKata);
     if (!pakaiModel) {
       return { bentuk: nilaiBentuk(target, f, this.ambang, dalamKata), mirip: kemiripan(target, f, this.ambang, dalamKata) };
     }
@@ -194,11 +194,11 @@ export class Percobaan {
     // memang senyap sesaat).
     // Desis (s, c, z) dikenali dari derau di mikrofon, seperti hembusan. Huruf lidah boleh
     // bersuara (d, n, l) atau berupa letupan tanpa suara (t, k).
-    const perluNapas = target === 'H' || target === 'S';
-    const perluSuara = !perluNapas && (this.tunggal || target !== 'M');
+    const perluNapas = target === 'h' || target === 's';
+    const perluSuara = !perluNapas && (this.tunggal || target !== 'm');
     const bunyiOk = perluNapas
       ? napas
-      : !perluSuara || suara || ((target === 'F' || target === 'T') && napas);
+      : !perluSuara || suara || ((target === 'f' || target === 't') && napas);
     const ok = bentuk.cocok && bunyiOk;
 
     if (ok) {
@@ -223,7 +223,7 @@ export class Percobaan {
       ? bentuk.petunjuk
       : bunyiOk
         ? null
-        : target === 'S'
+        : target === 's'
           ? 'desiskan'
           : perluNapas
             ? 'hembuskan'

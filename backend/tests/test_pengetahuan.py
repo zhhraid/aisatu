@@ -76,7 +76,7 @@ def test_cari_mengutamakan_bunyi_dan_pembaca_yang_sesuai():
     hasil = b.cari(["u"], "orang_tua", k=2)
     assert [h["teks"][:10] for h in hasil] == ["Orang tua ", "Untuk voka"]
     assert hasil[0]["judul"] == "Web B" and hasil[0]["url"] == "https://b"
-    assert b.cari(["M"], "guru", k=1)[0]["teks"].startswith("Untuk bunyi bilabial")
+    assert b.cari(["m"], "guru", k=1)[0]["teks"].startswith("Untuk bunyi bilabial")
 
 
 def test_cari_paling_banyak_k_rujukan():
@@ -122,7 +122,7 @@ def test_pembaca_tata_letak_menyusun_teks_dan_membersihkannya(tmp_path):
 def test_basis_yang_disertakan_berisi_buku_panduan():
     b = pengetahuan.muat()
     assert "kemdikbud-wicara-2024" in b.sumber
-    rujukan = b.cari(["M"], "guru", k=3)
+    rujukan = b.cari(["m"], "guru", k=3)
     assert rujukan and all(r["judul"].startswith("Panduan Guru Pengembangan Wicara") for r in rujukan)
     assert all(isinstance(r["halaman"], int) for r in rujukan)
 
@@ -379,6 +379,26 @@ def test_usulan_dan_fokus_saran_sama_bila_data_sama(monkeypatch):
     k = TestClient(app)
     for i in range(3):
         k.post(f"/ai/anak/sinta/percobaan", json={"item_id": "t1-u", "berhasil": i == 2})
-    tugas = {tuple(t["item"]["id"] for t in k.post("/ai/anak/sinta/tugas-usulan", json={"nama": "S"}).json()["tugas"]) for _ in range(5)}
-    fokus = {tuple(f["bunyi"] for f in k.post("/ai/anak/sinta/saran-belajar", json={"nama": "S"}).json()["fokus"]) for _ in range(5)}
+    tugas = {tuple(t["item"]["id"] for t in k.post("/ai/anak/sinta/tugas-usulan", json={"nama": "s"}).json()["tugas"]) for _ in range(5)}
+    fokus = {tuple(f["bunyi"] for f in k.post("/ai/anak/sinta/saran-belajar", json={"nama": "s"}).json()["fokus"]) for _ in range(5)}
     assert len(tugas) == 1 and len(fokus) == 1
+
+
+def test_data_lama_berkode_huruf_besar_tetap_terbaca():
+    lama = {"kc": {"M:1": {"p": 0.9, "n": 3}, "a:1": {"p": 0.5, "n": 1}},
+            "model_bibir": {"versi": 1, "kelas": ["a", "M"], "pusat": [[0.3], [0.0]], "skala": [0.05]}}
+    s = otak.StatusAnak.dari_dict(lama)
+    assert ("m", 1) in s.kc and ("M", 1) not in s.kc
+    assert s.model_bibir["kelas"] == ["a", "m"]
+    app = FastAPI()
+    app.include_router(buat_router(demo=True))
+    k = TestClient(app)
+    model = {"versi": 1, "kelas": ["a", "M"], "pusat": [[0.3, 0], [0.0, 0]], "skala": [0.05, 0.05], "jumlah": [5, 5]}
+    assert k.put("/ai/anak/x/model-bibir", json={"model": model}).json()["kelas"] == ["a", "m"]
+
+
+def test_semua_kode_bunyi_huruf_kecil():
+    from satu_ai.kurikulum import BUNYI, ITEM
+    assert all(b == b.lower() for b in BUNYI)
+    assert all(b == b.lower() for it in ITEM for b in it.urutan)
+    assert all(b == b.lower() for p in pengetahuan.muat().paragraf for b in p["bunyi"])

@@ -21,8 +21,8 @@ PemanggilLLM = Callable[[str, str], Awaitable[dict | None]]
 log = logging.getLogger("satu_ai.mulut")
 
 _NAMA_BUNYI = {
-    "a": "a", "i": "i", "u": "u", "o": "o", "M": "m/b/p", "e": "e", "F": "f/v", "H": "h",
-    "S": "desis (s/c/z/j)", "T": "lidah (t/d/n/l/r/k/g)",
+    "a": "a", "i": "i", "u": "u", "o": "o", "m": "m/b/p", "e": "e", "f": "f/v", "h": "h",
+    "s": "desis (s/c/z/j)", "t": "lidah (t/d/n/l/r/k/g)",
 }
 _KATA_LATIHAN = set(BANK_KATA) | set(SUKU_KATA)
 _ANGKA = re.compile(r"\d")
@@ -350,12 +350,12 @@ _PETUNJUK_BUNYI = {
     "i": "tarik bibir ke samping",
     "u": "kerucutkan bibir",
     "o": "bulatkan bibir dan buka sedikit",
-    "M": "rapatkan kedua bibir lalu buka",
+    "m": "rapatkan kedua bibir lalu buka",
     "e": "buka mulut sedikit dengan bibir agak ke samping",
-    "F": "tempelkan gigi atas ke bibir bawah lalu hembuskan udara",
-    "H": "buka mulut dan hembuskan napas, rasakan dengan tisu di depan mulut",
-    "S": "rapatkan gigi, buka bibir sedikit, lalu desiskan udara",
-    "T": "buka mulut sedikit dan perhatikan posisi lidah guru",
+    "f": "tempelkan gigi atas ke bibir bawah lalu hembuskan udara",
+    "h": "buka mulut dan hembuskan napas, rasakan dengan tisu di depan mulut",
+    "s": "rapatkan gigi, buka bibir sedikit, lalu desiskan udara",
+    "t": "buka mulut sedikit dan perhatikan posisi lidah guru",
 }
 
 

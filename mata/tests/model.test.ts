@@ -5,16 +5,16 @@ import { bacaModel, JARAK_ASING, latihDanValidasi, latihModel, layakDipakai, per
 import { Percobaan } from '../src/percobaan';
 import type { Bunyi, Fitur } from '../src/tipe';
 
-type BentukBibir = Exclude<Bunyi, 'H' | 'S' | 'T'>;
+type BentukBibir = Exclude<Bunyi, 'h' | 's' | 't'>;
 // Bentuk satu anak yang gerakannya kecil (di bawah ambang bawaan untuk sebagian bentuk).
 const PUSAT: Record<BentukBibir, Fitur> = {
   a: { rahang: 0.22, bulat: 0.03, lebar: 0.04, tekan: 0, celah: 0.09, gulung: 0 },
   i: { rahang: 0.05, bulat: 0.02, lebar: 0.13, tekan: 0, celah: 0.025, gulung: 0 },
   u: { rahang: 0.03, bulat: 0.28, lebar: 0, tekan: 0, celah: 0.015, gulung: 0 },
   o: { rahang: 0.13, bulat: 0.2, lebar: 0, tekan: 0, celah: 0.05, gulung: 0 },
-  M: { rahang: 0.01, bulat: 0.04, lebar: 0.02, tekan: 0.08, celah: 0.003, gulung: 0.02 },
+  m: { rahang: 0.01, bulat: 0.04, lebar: 0.02, tekan: 0.08, celah: 0.003, gulung: 0.02 },
   e: { rahang: 0.13, bulat: 0.02, lebar: 0.1, tekan: 0, celah: 0.045, gulung: 0 },
-  F: { rahang: 0.02, bulat: 0.03, lebar: 0.03, tekan: 0.06, celah: 0.008, gulung: 0.2 },
+  f: { rahang: 0.02, bulat: 0.03, lebar: 0.03, tekan: 0.06, celah: 0.008, gulung: 0.2 },
 };
 
 /** Contoh berderau di sekitar pusat, seperti frame kamera sungguhan. */
@@ -34,7 +34,7 @@ function contoh(seed = 1, n = 30, derau = 0.015): Record<BentukBibir, Fitur[]> {
 describe('model bibir personal', () => {
   it('dilatih dari contoh satu anak dan mengenali tiap bentuknya', () => {
     const model = latihModel(contoh());
-    expect(model.kelas).toEqual(['a', 'i', 'u', 'o', 'M', 'e', 'F']);
+    expect(model.kelas).toEqual(['a', 'i', 'u', 'o', 'm', 'e', 'f']);
     for (const [b, p] of Object.entries(PUSAT)) {
       const t = prediksi(model, p);
       expect(t.bunyi, b).toBe(b);
@@ -160,7 +160,7 @@ describe('model terus belajar dari latihan', () => {
     expect(perbaruiModel(model, 'a', PUSAT.o)).toBeNull(); // model mengira "o"
     const jauh: Fitur = { ...PUSAT.a, rahang: 0.6 };
     expect(perbaruiModel(model, 'a', jauh)).toBeNull();
-    expect(perbaruiModel(model, 'H', PUSAT.a)).toBeNull(); // "h" bukan kelas model
+    expect(perbaruiModel(model, 'h', PUSAT.a)).toBeNull(); // "h" bukan kelas model
   });
 
   it('banyak latihan membuat model mengikuti perubahan wajah anak', () => {
@@ -176,9 +176,16 @@ describe('model terus belajar dari latihan', () => {
     const p = new Percobaan(['a'], AMBANG_BAWAAN, { model: latihModel(contoh()) });
     for (let i = 0, t = 0; i < 30 && !p.hasil(); i++, t += 50) p.proses({ t, fitur: PUSAT.a, suara: true });
     expect(p.hasil()!.contoh!.rahang).toBeCloseTo(PUSAT.a.rahang);
-    const kata = new Percobaan(['M', 'a'], AMBANG_BAWAAN);
-    kata.proses({ t: 0, fitur: PUSAT.M, suara: false });
-    kata.proses({ t: 50, fitur: PUSAT.M, suara: false });
+    const kata = new Percobaan(['m', 'a'], AMBANG_BAWAAN);
+    kata.proses({ t: 0, fitur: PUSAT.m, suara: false });
+    kata.proses({ t: 50, fitur: PUSAT.m, suara: false });
     expect(kata.hasil()).toBeNull();
+  });
+});
+
+describe('kode bunyi huruf kecil', () => {
+  it('model lama berkode huruf besar dibaca sebagai huruf kecil', () => {
+    const lama = { versi: 1, kelas: ['a', 'M', 'F'], pusat: [[0.3], [0], [0.1]], skala: [0.05], jumlah: [5, 5, 5] };
+    expect(bacaModel(lama)!.kelas).toEqual(['a', 'm', 'f']);
   });
 });

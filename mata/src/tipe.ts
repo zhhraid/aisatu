@@ -1,18 +1,18 @@
 /**
- * Bentuk yang dinilai. "M" = bibir menutup (m, b, p), "F" = gigi atas ke bibir bawah (f, v),
- * "H" = hembusan napas (h), dinilai dari mikrofon. w dinilai sebagai "u", y sebagai "i".
+ * Bentuk yang dinilai. "m" = bibir menutup (m, b, p), "f" = gigi atas ke bibir bawah (f, v),
+ * "h" = hembusan napas (h), dinilai dari mikrofon. w dinilai sebagai "u", y sebagai "i".
  * Huruf lidah dinilai SEBAGIAN (posisi mulut dan suaranya, bukan lidah):
- * "S" = desis (s, c, x, z, j), "T" = huruf lidah lain (t, d, n, l, r, k, g, q).
+ * "s" = desis (s, c, x, z, j), "t" = huruf lidah lain (t, d, n, l, r, k, g, q).
  */
-export type Bunyi = 'a' | 'i' | 'u' | 'o' | 'M' | 'e' | 'F' | 'H' | 'S' | 'T';
+export type Bunyi = 'a' | 'i' | 'u' | 'o' | 'm' | 'e' | 'f' | 'h' | 's' | 't';
 
-export const SEMUA_BUNYI: readonly Bunyi[] = ['a', 'i', 'u', 'o', 'M', 'e', 'F', 'H', 'S', 'T'];
+export const SEMUA_BUNYI: readonly Bunyi[] = ['a', 'i', 'u', 'o', 'm', 'e', 'f', 'h', 's', 't'];
 
 /** Bunyi yang hanya dinilai sebagian karena kamera tidak bisa melihat lidah. */
-export const DINILAI_SEBAGIAN: readonly Bunyi[] = ['S', 'T'];
+export const DINILAI_SEBAGIAN: readonly Bunyi[] = ['s', 't'];
 
-/** Bentuk yang dinilai penuh dari bibir (tanpa "H" yang dari napas, dan tanpa huruf lidah). */
-export const BENTUK_BIBIR: readonly Bunyi[] = ['a', 'i', 'u', 'o', 'M', 'e', 'F'];
+/** Bentuk yang dinilai penuh dari bibir (tanpa "h" yang dari napas, dan tanpa huruf lidah). */
+export const BENTUK_BIBIR: readonly Bunyi[] = ['a', 'i', 'u', 'o', 'm', 'e', 'f'];
 
 /** Nilai blendshape MediaPipe per nama, 0 sampai 1. */
 export type Blendshape = Record<string, number>;

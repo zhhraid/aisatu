@@ -79,7 +79,7 @@ class MasukanDemo(BaseModel):
 
 
 # Yang dianggap baru tercapai minggu ini di tiap profil; sisanya tercapai lebih lama.
-_BARU_TERCAPAI = {"pemula": set(), "menengah": {"a:2"}, "mahir": {"a:4", "M:4"}}
+_BARU_TERCAPAI = {"pemula": set(), "menengah": {"a:2"}, "mahir": {"a:4", "m:4"}}
 
 # Profil data demo: penguasaan per "bunyi:tingkat". Selalu ditandai sintetis.
 _PROFIL_DEMO: dict[str, dict[str, tuple[float, int, int]]] = {
@@ -87,12 +87,12 @@ _PROFIL_DEMO: dict[str, dict[str, tuple[float, int, int]]] = {
     "pemula": {"a:1": (0.72, 1, 0)},
     "menengah": {
         "a:1": (0.98, 4, 1), "i:1": (0.98, 4, 1), "u:1": (0.97, 5, 1),
-        "o:1": (0.96, 5, 2), "M:1": (0.98, 3, 2),
+        "o:1": (0.96, 5, 2), "m:1": (0.98, 3, 2),
         "a:2": (0.96, 4, 1), "i:2": (0.90, 4, 5), "u:2": (0.35, 7, 1),
     },
     "mahir": {
         **{f"{b}:{t}": (0.97, 5, 3 + t) for b in BUNYI for t in (1, 2, 3)},
-        "a:4": (0.90, 4, 6), "M:4": (0.88, 4, 6), "o:4": (0.55, 3, 2),
+        "a:4": (0.90, 4, 6), "m:4": (0.88, 4, 6), "o:4": (0.55, 3, 2),
     },
 }
 
@@ -220,6 +220,7 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
     @router.put("/anak/{anak_id}/model-bibir")
     def simpan_model(anak_id: str, masukan: MasukanModel) -> dict:
         m = masukan.model
+        m.kelas = [b.lower() for b in m.kelas]  # model lama memakai M dan F
         if any(b not in BUNYI for b in m.kelas) or len(m.kelas) != len(m.pusat):
             raise HTTPException(422, "Kelas model tidak dikenal atau tidak sesuai jumlah pusat")
         if any(len(p) != len(m.skala) for p in m.pusat):

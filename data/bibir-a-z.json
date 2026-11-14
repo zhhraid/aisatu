@@ -1,5 +1,5 @@
 {
- "keterangan": "Koordinat bibir contoh huruf a-z. Kotak 1x1, pusat mulut (0.5, 0.5), y ke bawah. Kunci titik = indeks titik bibir MediaPipe Face Landmarker. dinilai_sebagian = huruf lidah: kamera menilai posisi mulut dan suara, bukan lidah. Dibangkitkan dari mata/src/tutorial.ts.",
+ "keterangan": "Koordinat bibir contoh huruf a-z. Kotak 1x1, pusat mulut (0.5, 0.5), y ke bawah. Kunci titik = indeks titik bibir MediaPipe Face Landmarker. dinilai = kode bunyi yang dinilai (huruf kecil); dinilai_sebagian = huruf lidah: kamera menilai posisi mulut dan suara, bukan lidah. Dibangkitkan dari mata/src/tutorial.ts.",
  "urutan_garis": {
   "luar_atas": [
    61,
@@ -225,7 +225,7 @@
   },
   "b": {
    "bentuk": "katup",
-   "dinilai": "M",
+   "dinilai": "m",
    "dinilai_sebagian": false,
    "petunjuk": "Rapatkan kedua bibir, lalu buka.",
    "titik": {
@@ -393,7 +393,7 @@
   },
   "c": {
    "bentuk": "desis",
-   "dinilai": "S",
+   "dinilai": "s",
    "dinilai_sebagian": true,
    "petunjuk": "Rapatkan gigi, buka bibir sedikit, lalu desiskan udara (sss).",
    "titik": {
@@ -561,7 +561,7 @@
   },
   "d": {
    "bentuk": "lidah",
-   "dinilai": "T",
+   "dinilai": "t",
    "dinilai_sebagian": true,
    "petunjuk": "Buka mulut sedikit; bunyi ini dibentuk lidah. Perhatikan posisi lidah guru.",
    "titik": {
@@ -897,7 +897,7 @@
   },
   "f": {
    "bentuk": "gigi_bibir",
-   "dinilai": "F",
+   "dinilai": "f",
    "dinilai_sebagian": false,
    "petunjuk": "Gigi atas menyentuh bibir bawah.",
    "titik": {
@@ -1065,7 +1065,7 @@
   },
   "g": {
    "bentuk": "lidah",
-   "dinilai": "T",
+   "dinilai": "t",
    "dinilai_sebagian": true,
    "petunjuk": "Buka mulut sedikit; bunyi ini dibentuk lidah. Perhatikan posisi lidah guru.",
    "titik": {
@@ -1233,7 +1233,7 @@
   },
   "h": {
    "bentuk": "hembusan",
-   "dinilai": "H",
+   "dinilai": "h",
    "dinilai_sebagian": false,
    "petunjuk": "Buka mulut dan hembuskan napas. Coba dengan tisu di depan mulut.",
    "titik": {
@@ -1569,7 +1569,7 @@
   },
   "j": {
    "bentuk": "desis",
-   "dinilai": "S",
+   "dinilai": "s",
    "dinilai_sebagian": true,
    "petunjuk": "Rapatkan gigi, buka bibir sedikit, lalu desiskan udara (sss).",
    "titik": {
@@ -1737,7 +1737,7 @@
   },
   "k": {
    "bentuk": "lidah",
-   "dinilai": "T",
+   "dinilai": "t",
    "dinilai_sebagian": true,
    "petunjuk": "Buka mulut sedikit; bunyi ini dibentuk lidah. Perhatikan posisi lidah guru.",
    "titik": {
@@ -1905,7 +1905,7 @@
   },
   "l": {
    "bentuk": "lidah",
-   "dinilai": "T",
+   "dinilai": "t",
    "dinilai_sebagian": true,
    "petunjuk": "Buka mulut sedikit; bunyi ini dibentuk lidah. Perhatikan posisi lidah guru.",
    "titik": {
@@ -2073,7 +2073,7 @@
   },
   "m": {
    "bentuk": "katup",
-   "dinilai": "M",
+   "dinilai": "m",
    "dinilai_sebagian": false,
    "petunjuk": "Rapatkan kedua bibir, lalu buka.",
    "titik": {
@@ -2241,7 +2241,7 @@
   },
   "n": {
    "bentuk": "lidah",
-   "dinilai": "T",
+   "dinilai": "t",
    "dinilai_sebagian": true,
    "petunjuk": "Buka mulut sedikit; bunyi ini dibentuk lidah. Perhatikan posisi lidah guru.",
    "titik": {
@@ -2577,7 +2577,7 @@
   },
   "p": {
    "bentuk": "katup",
-   "dinilai": "M",
+   "dinilai": "m",
    "dinilai_sebagian": false,
    "petunjuk": "Rapatkan kedua bibir, lalu buka.",
    "titik": {
@@ -2745,7 +2745,7 @@
   },
   "q": {
    "bentuk": "lidah",
-   "dinilai": "T",
+   "dinilai": "t",
    "dinilai_sebagian": true,
    "petunjuk": "Buka mulut sedikit; bunyi ini dibentuk lidah. Perhatikan posisi lidah guru.",
    "titik": {
@@ -2913,7 +2913,7 @@
   },
   "r": {
    "bentuk": "lidah",
-   "dinilai": "T",
+   "dinilai": "t",
    "dinilai_sebagian": true,
    "petunjuk": "Buka mulut sedikit; bunyi ini dibentuk lidah. Perhatikan posisi lidah guru.",
    "titik": {
@@ -3081,7 +3081,7 @@
   },
   "s": {
    "bentuk": "desis",
-   "dinilai": "S",
+   "dinilai": "s",
    "dinilai_sebagian": true,
    "petunjuk": "Rapatkan gigi, buka bibir sedikit, lalu desiskan udara (sss).",
    "titik": {
@@ -3249,7 +3249,7 @@
   },
   "t": {
    "bentuk": "lidah",
-   "dinilai": "T",
+   "dinilai": "t",
    "dinilai_sebagian": true,
    "petunjuk": "Buka mulut sedikit; bunyi ini dibentuk lidah. Perhatikan posisi lidah guru.",
    "titik": {
@@ -3585,7 +3585,7 @@
   },
   "v": {
    "bentuk": "gigi_bibir",
-   "dinilai": "F",
+   "dinilai": "f",
    "dinilai_sebagian": false,
    "petunjuk": "Gigi atas menyentuh bibir bawah.",
    "titik": {
@@ -3921,7 +3921,7 @@
   },
   "x": {
    "bentuk": "desis",
-   "dinilai": "S",
+   "dinilai": "s",
    "dinilai_sebagian": true,
    "petunjuk": "Rapatkan gigi, buka bibir sedikit, lalu desiskan udara (sss).",
    "titik": {
@@ -4257,7 +4257,7 @@
   },
   "z": {
    "bentuk": "desis",
-   "dinilai": "S",
+   "dinilai": "s",
    "dinilai_sebagian": true,
    "petunjuk": "Rapatkan gigi, buka bibir sedikit, lalu desiskan udara (sss).",
    "titik": {

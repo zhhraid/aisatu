@@ -14,8 +14,8 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 
 Sudah diuji:
 
-- Backend: 140 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
-- Mata: 72 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
+- Backend: 142 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
+- Mata: 73 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
 Belum diuji, dan harus kalian lakukan:
@@ -151,6 +151,8 @@ Jawabannya (contoh asli: kegagalan ketiga berturut-turut pada kata "bola", macet
 - `lelah` = `{"lelah": true/false, "alasan": [...]}`: saran berhenti untuk hari ini kalau sesi sudah 15 menit atau 40 percobaan, anak makin lama menjawab (median 5 percobaan terakhir minimal 1,6 kali 5 pertama), atau makin sering gagal (turun 30 poin dari awal sesi). Kirim `durasi_ms` supaya tanda "makin lama" bisa dihitung. Tampilkan sebagai ajakan istirahat, bukan larangan.
 - Nama anak dikirim hanya ke endpoint teks (`{"nama": "Raka"}`) dan tidak diteruskan ke LLM.
 
+Kode bunyi selalu huruf kecil: `a i u o e` (vokal), `m` (m/b/p), `f` (f/v), `h`, `s` (desis: s/c/x/z/j), `t` (huruf lidah: t/d/n/l/r/k/g/q). w dinilai sebagai `u`, y sebagai `i`. Data lama berhuruf besar (`M`, `F`, ...) dibaca otomatis sebagai huruf kecil.
+
 Nilai `alasan`: `zona` (pilihan biasa), `penguatan` (terlalu sering gagal, diberi yang mudah), `lebih_sulit` (terlalu sering berhasil), `lebih_mudah`, `turun_tingkat`, `ganti_bunyi`, `jelajah` (acak 1 dari 10), `ulang_tuntas`.
 
 ### Rujukan: buku Kemendikbud, web, dan data anak
@@ -213,7 +215,7 @@ npm run cek-tipe
 ### Halaman uji
 
 1. **Mulai kamera**, lalu **Kalibrasi** sambil diam dengan mulut tertutup.
-2. Lihat lima angka (`rahang`, `bulat`, `lebar`, `tekan`, `celah`) sambil membuat tiap bentuk. Keping `a i u o M` menyala kalau aturannya terpenuhi.
+2. Lihat angka (`rahang`, `bulat`, `lebar`, `tekan`, `celah`, `gulung`) sambil membuat tiap bentuk. Keping `a i u o m e f h s t` menyala kalau aturannya terpenuhi.
 3. Tekan **Setel otomatis** dan buat lima bentuk saat diminta; ambang dihitung dari wajahmu dan langsung dipakai. Kalau ada bentuk yang terlalu mirip, halaman menyebut bentuk mana yang perlu diulang. Angka juga bisa diubah sendiri di kotak **Ambang aturan**. Salin hasil akhirnya ke `src/aturan.ts`.
 4. **Uji singkat** mencatat berhasil dan jumlah per target, untuk angka di slide.
 5. **Sambung ke Otak** menjalankan alur penuh dengan backend.

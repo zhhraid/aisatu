@@ -126,6 +126,7 @@ class StatusAnak:
         status = cls()
         for kunci, k in d.get("kc", {}).items():
             bunyi, tingkat = kunci.split(":")
+            bunyi = bunyi.lower()  # data lama memakai M, F, H, S, T
             status.kc[(bunyi, int(tingkat))] = KC(
                 p=k["p"],
                 n=k.get("n", 0),
@@ -144,6 +145,8 @@ class StatusAnak:
         status.riwayat = {t: {**r, "kc": dict(r.get("kc", {}))} for t, r in d.get("riwayat", {}).items()}
         status.tadi_penguatan = d.get("tadi_penguatan", False)
         status.model_bibir = d.get("model_bibir")
+        if status.model_bibir and isinstance(status.model_bibir.get("kelas"), list):
+            status.model_bibir["kelas"] = [str(b).lower() for b in status.model_bibir["kelas"]]
         status.sesi_mulai = waktu(d.get("sesi_mulai"))
         status.hasil_sesi = list(d.get("hasil_sesi", []))
         status.durasi_sesi = list(d.get("durasi_sesi", []))

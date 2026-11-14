@@ -135,7 +135,8 @@ export function bacaModel(data: unknown): ModelBibir | null {
     return null;
   }
   if (m.kelas.length !== m.pusat.length || m.pusat.some((p) => p.length !== m.skala!.length)) return null;
-  return m as ModelBibir;
+  // Model lama memakai kode huruf besar (M, F); kini semua huruf kecil.
+  return { ...(m as ModelBibir), kelas: m.kelas.map((b) => String(b).toLowerCase() as Bunyi) };
 }
 
 /** Melatih model sekaligus mengukur akurasinya dengan validasi silang. */

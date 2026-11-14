@@ -30,13 +30,13 @@ KATA_BUNYI: dict[str, list[str]] = {
     "i": ["vokal i", "bunyi i", "/i/", "bibir melebar", "bibir ditarik"],
     "u": ["vokal u", "bunyi u", "/u/", "bibir maju", "mengerucut", "monyong"],
     "o": ["vokal o", "bunyi o", "/o/", "bibir bulat", "membulat"],
-    "M": ["bilabial", "dwibibir", "kedua bibir", "bibir rapat", "merapatkan bibir",
+    "m": ["bilabial", "dwibibir", "kedua bibir", "bibir rapat", "merapatkan bibir",
           "bunyi m", "bunyi b", "bunyi p", "/m/", "/b/", "/p/"],
     "e": ["vokal e", "bunyi e", "/e/", "/é/", "/ê/", "pepet", "taling"],
-    "F": ["labiodental", "bibir bawah", "gigi atas", "bunyi f", "bunyi v", "/f/", "/v/"],
-    "H": ["glotal", "hembusan", "embusan", "napas", "bunyi h", "/h/", "tisu", "lilin"],
-    "S": ["desis", "frikatif", "bunyi s", "/s/", "/z/", "/c/", "/j/", "gigi rapat"],
-    "T": ["apikal", "alveolar", "velar", "ujung lidah", "pangkal lidah", "bunyi t", "bunyi k",
+    "f": ["labiodental", "bibir bawah", "gigi atas", "bunyi f", "bunyi v", "/f/", "/v/"],
+    "h": ["glotal", "hembusan", "embusan", "napas", "bunyi h", "/h/", "tisu", "lilin"],
+    "s": ["desis", "frikatif", "bunyi s", "/s/", "/z/", "/c/", "/j/", "gigi rapat"],
+    "t": ["apikal", "alveolar", "velar", "ujung lidah", "pangkal lidah", "bunyi t", "bunyi k",
           "/t/", "/d/", "/k/", "/g/", "/l/", "/r/", "/n/"],
 }
 

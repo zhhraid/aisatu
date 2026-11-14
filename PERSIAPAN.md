@@ -232,4 +232,4 @@ Templat cadangan: "ANAK sudah bisa bunyi {daftar}. Minggu ini ANAK sedang berlat
 1. Kirim pertanyaan ke panitia: project lama, durasi presentasi, kriteria penilaian, dan apakah dokumen seperti ini dianggap desain.
 2. Cocokkan bank kata dengan buku guru.
 3. Unduh file model Face Landmarker dan cek kunci API LLM.
-4. Sepakati dengan fullstack dan mobile: nama bunyi (a, i, u, o, M), nomor tingkat (1–4), dan tiga label penguasaan.
+4. Sepakati dengan fullstack dan mobile: nama bunyi (a, i, u, o, e, m, f, h, s, t; semua huruf kecil), nomor tingkat (1–4), dan tiga label penguasaan.

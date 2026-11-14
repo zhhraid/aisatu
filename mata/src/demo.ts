@@ -81,7 +81,7 @@ function tampilkanFrame(frame: FrameMata): void {
   for (const [bunyi, span] of keping) {
     // "h" dan desis menyala hanya kalau ada hembusan; huruf lidah kalau ada bunyi apa pun.
     const bunyiOk =
-      bunyi === 'H' || bunyi === 'S' ? frame.napas : bunyi === 'T' ? frame.suara || frame.napas : true;
+      bunyi === 'h' || bunyi === 's' ? frame.napas : bunyi === 't' ? frame.suara || frame.napas : true;
     let cocokBentuk = frame.fitur !== null && nilaiBentuk(bunyi, frame.fitur, mata?.ambang).cocok;
     const model = mata?.model;
     if (frame.fitur && model?.kelas.includes(bunyi)) {
@@ -102,7 +102,7 @@ function tampilkanFrame(frame: FrameMata): void {
 
 function tampilkanUrutan(): Bunyi[] {
   const teks = masukan('target').value.trim();
-  const urutan = itemOtak?.teks === teks ? itemOtak.urutan : teks === 'M' ? ['M' as Bunyi] : urutanDariTeks(teks);
+  const urutan = itemOtak?.teks === teks ? itemOtak.urutan : teks === 'm' ? ['m' as Bunyi] : urutanDariTeks(teks);
   el('urutan').textContent = urutan.length ? urutan.join(' , ') : '(tidak ada bentuk yang bisa dinilai)';
   return urutan;
 }
@@ -342,15 +342,15 @@ pilihHuruf('a');
 
 // ---------------------------------------------------------- setel otomatis
 
-type BentukBibir = Exclude<Bunyi, 'H' | 'S' | 'T'>;
+type BentukBibir = Exclude<Bunyi, 'h' | 's' | 't'>;
 const NAMA_BENTUK: Record<BentukBibir, string> = {
   a: '"aaa", mulut terbuka lebar',
   i: '"iii", bibir ditarik ke samping',
   u: '"uuu", bibir mengerucut',
   o: '"ooo", bibir bulat dan agak terbuka',
-  M: '"mmm", bibir rapat',
+  m: '"mmm", bibir rapat',
   e: '"eee", mulut terbuka sedikit',
-  F: '"fff", gigi atas menempel di bibir bawah',
+  f: '"fff", gigi atas menempel di bibir bawah',
 };
 const tunggu = (ms: number) => new Promise((selesai) => setTimeout(selesai, ms));
 
@@ -379,7 +379,7 @@ tombol('tombolSetel').addEventListener('click', async () => {
   const contohFrame = {} as Record<BentukBibir, Fitur[]>;
   try {
     for (const bunyi of BENTUK_BIBIR as BentukBibir[]) {
-      pilihHuruf(bunyi === 'M' ? 'm' : bunyi === 'F' ? 'f' : bunyi);
+      pilihHuruf(bunyi === 'm' ? 'm' : bunyi === 'f' ? 'f' : bunyi);
       for (let hitung = 3; hitung > 0; hitung--) {
         arahan.textContent = `Siap-siap: ${NAMA_BENTUK[bunyi]} (${hitung})`;
         await tunggu(600);
@@ -490,7 +490,7 @@ function tampilkanAkurasi(): void {
 /** Merekam satu bentuk 2 detik dan mencatat tebakan aturan dan model personal. */
 async function rekamSatu(target: BentukBibir, awalan = ''): Promise<void> {
   const arahan = el('arahanUji');
-  pilihHuruf(target === 'M' ? 'm' : target === 'F' ? 'f' : target);
+  pilihHuruf(target === 'm' ? 'm' : target === 'f' ? 'f' : target);
   for (let hitung = 3; hitung > 0; hitung--) {
     arahan.textContent = `${awalan}Siap-siap: ${NAMA_BENTUK[target]} (${hitung})`;
     await tunggu(500);

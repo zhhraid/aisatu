@@ -15,18 +15,18 @@ const BENTUK: Record<Bunyi, Fitur> = {
   i: { rahang: 0.1, bulat: 0.02, lebar: 0.45, tekan: 0, celah: 0.04 },
   u: { rahang: 0.1, bulat: 0.6, lebar: 0, tekan: 0, celah: 0.03 },
   o: { rahang: 0.35, bulat: 0.5, lebar: 0, tekan: 0, celah: 0.1 },
-  M: { rahang: 0.02, bulat: 0.05, lebar: 0, tekan: 0.1, celah: 0.004 },
+  m: { rahang: 0.02, bulat: 0.05, lebar: 0, tekan: 0.1, celah: 0.004 },
   e: { rahang: 0.2, bulat: 0.03, lebar: 0.2, tekan: 0, celah: 0.06 },
-  F: { rahang: 0.03, bulat: 0.05, lebar: 0.05, tekan: 0.1, celah: 0.008, gulung: 0.35 },
-  H: { rahang: 0.2, bulat: 0.05, lebar: 0.05, tekan: 0, celah: 0.08 },
-  S: { rahang: 0.05, bulat: 0.05, lebar: 0.2, tekan: 0, celah: 0.015 },
-  T: { rahang: 0.15, bulat: 0.05, lebar: 0.1, tekan: 0, celah: 0.05 },
+  f: { rahang: 0.03, bulat: 0.05, lebar: 0.05, tekan: 0.1, celah: 0.008, gulung: 0.35 },
+  h: { rahang: 0.2, bulat: 0.05, lebar: 0.05, tekan: 0, celah: 0.08 },
+  s: { rahang: 0.05, bulat: 0.05, lebar: 0.2, tekan: 0, celah: 0.015 },
+  t: { rahang: 0.15, bulat: 0.05, lebar: 0.1, tekan: 0, celah: 0.05 },
 };
 
 describe('aturan bentuk bibir', () => {
   it('tiap bentuk contoh hanya cocok dengan bunyinya sendiri', () => {
     for (const bentuk of ['a', 'i', 'u', 'o'] as Bunyi[]) {
-      for (const target of ['a', 'i', 'u', 'o', 'M'] as Bunyi[]) {
+      for (const target of ['a', 'i', 'u', 'o', 'm'] as Bunyi[]) {
         expect(nilaiBentuk(target, BENTUK[bentuk]).cocok, `${bentuk} dinilai sebagai ${target}`).toBe(
           bentuk === target,
         );
@@ -44,31 +44,31 @@ describe('aturan bentuk bibir', () => {
     expect(nilaiBentuk('u', DIAM).petunjuk).toBe('kerucutkan');
     expect(nilaiBentuk('o', BENTUK.u).petunjuk).toBe('buka_sedikit');
     expect(nilaiBentuk('o', DIAM).petunjuk).toBe('bulatkan');
-    expect(nilaiBentuk('M', BENTUK.a).petunjuk).toBe('rapatkan');
+    expect(nilaiBentuk('m', BENTUK.a).petunjuk).toBe('rapatkan');
   });
 
   it('bibir diam yang rapat cocok dengan M, dan bisa diperketat lewat tekanMin', () => {
-    expect(nilaiBentuk('M', DIAM).cocok).toBe(true);
-    const ketat = { ...AMBANG_BAWAAN, M: { ...AMBANG_BAWAAN.M, tekanMin: 0.2 } };
-    expect(nilaiBentuk('M', DIAM, ketat).cocok).toBe(false);
+    expect(nilaiBentuk('m', DIAM).cocok).toBe(true);
+    const ketat = { ...AMBANG_BAWAAN, m: { ...AMBANG_BAWAAN.m, tekanMin: 0.2 } };
+    expect(nilaiBentuk('m', DIAM, ketat).cocok).toBe(false);
   });
 
   it('bibir yang mengerucut rapat adalah "u", bukan mengatup', () => {
     // Saat mengucap "u" celah bibir bisa sekecil bibir yang rapat.
     const uRapat: Fitur = { rahang: 0.05, bulat: 0.6, lebar: 0, tekan: 0.1, celah: 0.01 };
     expect(nilaiBentuk('u', uRapat).cocok).toBe(true);
-    expect(nilaiBentuk('M', uRapat)).toEqual({ cocok: false, petunjuk: 'jangan_bulatkan' });
+    expect(nilaiBentuk('m', uRapat)).toEqual({ cocok: false, petunjuk: 'jangan_bulatkan' });
     // Di dalam kata ("bu", "mo") bibir boleh mengatup sambil membulat.
-    expect(nilaiBentuk('M', uRapat, AMBANG_BAWAAN, true).cocok).toBe(true);
+    expect(nilaiBentuk('m', uRapat, AMBANG_BAWAAN, true).cocok).toBe(true);
   });
 
   it('urutan bentuk dari kata sama dengan aturan backend', () => {
-    expect(urutanDariTeks('bola')).toEqual(['M', 'o', 'T', 'a']);
-    expect(urutanDariTeks('mama')).toEqual(['M', 'a', 'M', 'a']);
-    expect(urutanDariTeks('buku')).toEqual(['M', 'u', 'T', 'u']);
-    expect(urutanDariTeks('ibu')).toEqual(['i', 'M', 'u']);
-    expect(urutanDariTeks('Susu')).toEqual(['S', 'u', 'S', 'u']);
-    expect(urutanDariTeks('anggur')).toEqual(['a', 'T', 'u', 'T']); // "ngg" satu bunyi lidah
+    expect(urutanDariTeks('bola')).toEqual(['m', 'o', 't', 'a']);
+    expect(urutanDariTeks('mama')).toEqual(['m', 'a', 'm', 'a']);
+    expect(urutanDariTeks('buku')).toEqual(['m', 'u', 't', 'u']);
+    expect(urutanDariTeks('ibu')).toEqual(['i', 'm', 'u']);
+    expect(urutanDariTeks('Susu')).toEqual(['s', 'u', 's', 'u']);
+    expect(urutanDariTeks('anggur')).toEqual(['a', 't', 'u', 't']); // "ngg" satu bunyi lidah
   });
 });
 
@@ -238,9 +238,9 @@ describe('percobaan', () => {
 
   it('kata dinilai sebagai urutan bentuk, bibir mengatup tidak perlu bersuara', () => {
     const { hasil } = jalankan(urutanDariTeks('bola'), [
-      [BENTUK.M, false, 4],
+      [BENTUK.m, false, 4],
       [BENTUK.o, true, 5],
-      [BENTUK.T, true, 2],
+      [BENTUK.t, true, 2],
       [BENTUK.a, true, 5],
     ]);
     expect(hasil).toMatchObject({ berhasil: true, langkah_tercapai: 4 });
@@ -248,7 +248,7 @@ describe('percobaan', () => {
 
   it('kata yang urutannya salah gagal di langkah yang macet', () => {
     // Anak mengucapkan "ba" lalu berhenti: M dan o diminta, tapi yang muncul M lalu a.
-    const { hasil } = jalankan(urutanDariTeks('bola'), [[BENTUK.M, false, 4], [BENTUK.a, true, 200]]);
+    const { hasil } = jalankan(urutanDariTeks('bola'), [[BENTUK.m, false, 4], [BENTUK.a, true, 200]]);
     expect(hasil).toMatchObject({ berhasil: false, langkah_tercapai: 1 });
   });
 
@@ -257,12 +257,12 @@ describe('percobaan', () => {
     const { hasil } = jalankan(urutanDariTeks('bu'), [[katupBulat, false, 4], [BENTUK.u, true, 6]]);
     expect(hasil).toMatchObject({ berhasil: true, langkah_tercapai: 2 });
     // Sebagai bunyi tunggal "m", bentuk yang sama tidak lolos.
-    expect(jalankan(['M'], [[katupBulat, true, 30]]).hasil).toBeNull();
+    expect(jalankan(['m'], [[katupBulat, true, 30]]).hasil).toBeNull();
   });
 
   it('vokal di dalam kata tetap perlu suara', () => {
     const { hasil } = jalankan(urutanDariTeks('bola'), [
-      [BENTUK.M, false, 4],
+      [BENTUK.m, false, 4],
       [BENTUK.o, false, 10],
       [BENTUK.a, false, 200],
     ]);
@@ -275,9 +275,9 @@ describe('percobaan', () => {
   });
 
   it('progres naik per langkah dan urutan kosong ditolak', () => {
-    const p = new Percobaan(['M', 'a'], AMBANG_BAWAAN);
-    p.proses({ t: 0, fitur: BENTUK.M, suara: false });
-    const k = p.proses({ t: 50, fitur: BENTUK.M, suara: false });
+    const p = new Percobaan(['m', 'a'], AMBANG_BAWAAN);
+    p.proses({ t: 0, fitur: BENTUK.m, suara: false });
+    const k = p.proses({ t: 50, fitur: BENTUK.m, suara: false });
     expect(k).toMatchObject({ langkah: 1, target: 'a', jumlahLangkah: 2, progres: 0.5 });
     expect(() => new Percobaan([])).toThrow();
   });
@@ -291,7 +291,7 @@ describe('kemiripan dan bintang', () => {
     expect(kemiripan('a', DIAM)).toBeLessThan(kemiripan('a', setengahBuka));
     expect(kemiripan('a', setengahBuka)).toBeLessThan(kemiripan('a', hampir));
     expect(kemiripan('a', hampir)).toBeLessThanOrEqual(0.95);
-    for (const b of ['a', 'i', 'u', 'o', 'M'] as Bunyi[]) {
+    for (const b of ['a', 'i', 'u', 'o', 'm'] as Bunyi[]) {
       for (const f of [DIAM, ...Object.values(BENTUK)]) {
         const k = kemiripan(b, f);
         expect(k).toBeGreaterThanOrEqual(0);
@@ -302,7 +302,7 @@ describe('kemiripan dan bintang', () => {
 
   it('bentuk lain jauh dari target', () => {
     expect(kemiripan('u', BENTUK.a)).toBeLessThan(0.5);
-    expect(kemiripan('M', BENTUK.a)).toBeLessThan(0.5);
+    expect(kemiripan('m', BENTUK.a)).toBeLessThan(0.5);
   });
 
   it('bintang: berhasil dan mirip 3, berhasil 2, belum berhasil tetap 1', () => {
@@ -405,18 +405,18 @@ describe('tutorial bibir a-z', () => {
     // Huruf lidah: dinilai sebagian, dan tutorialnya jujur soal itu.
     const sebagian = ABJAD.filter((h) => h.sebagian).map((h) => h.huruf).join('');
     expect(sebagian).toBe('cdgjklnqrstxz');
-    expect(hurufTutorial('r')).toMatchObject({ bentuk: 'lidah', dinilai: 'T', sebagian: true });
-    expect(hurufTutorial('s')).toMatchObject({ bentuk: 'desis', dinilai: 'S', sebagian: true });
+    expect(hurufTutorial('r')).toMatchObject({ bentuk: 'lidah', dinilai: 't', sebagian: true });
+    expect(hurufTutorial('s')).toMatchObject({ bentuk: 'desis', dinilai: 's', sebagian: true });
     expect(hurufTutorial('a').sebagian).toBe(false);
     expect(hurufTutorial('1').dinilai).toBeNull();
-    expect(hurufTutorial('F')).toMatchObject({ huruf: 'f', bentuk: 'gigi_bibir' });
+    expect(hurufTutorial('f')).toMatchObject({ huruf: 'f', bentuk: 'gigi_bibir' });
     expect(hurufTutorial('w')).toMatchObject({ bentuk: 'u', dinilai: 'u' });
-    expect(hurufTutorial('h')).toMatchObject({ bentuk: 'hembusan', dinilai: 'H' });
+    expect(hurufTutorial('h')).toMatchObject({ bentuk: 'hembusan', dinilai: 'h' });
   });
 });
 
-type BentukBibir = Exclude<Bunyi, 'H' | 'S' | 'T'>;
-const SEMUA: BentukBibir[] = ['a', 'i', 'u', 'o', 'M', 'e', 'F'];
+type BentukBibir = Exclude<Bunyi, 'h' | 's' | 't'>;
+const SEMUA: BentukBibir[] = ['a', 'i', 'u', 'o', 'm', 'e', 'f'];
 
 describe('ambang dan penyetelan otomatis', () => {
   // Contoh bentuk satu orang setelah kalibrasi netral, dengan gerakan kecil seperti saat bicara biasa.
@@ -425,9 +425,9 @@ describe('ambang dan penyetelan otomatis', () => {
     i: { rahang: 0.08, bulat: 0.02, lebar: 0.22, tekan: 0, celah: 0.03 },
     u: { rahang: 0.04, bulat: 0.45, lebar: 0, tekan: 0, celah: 0.02 },
     o: { rahang: 0.2, bulat: 0.32, lebar: 0, tekan: 0, celah: 0.07 },
-    M: { rahang: 0.01, bulat: 0.06, lebar: 0.03, tekan: 0.1, celah: 0.003 },
+    m: { rahang: 0.01, bulat: 0.06, lebar: 0.03, tekan: 0.1, celah: 0.003 },
     e: { rahang: 0.2, bulat: 0.03, lebar: 0.15, tekan: 0, celah: 0.06 },
-    F: { rahang: 0.03, bulat: 0.04, lebar: 0.04, tekan: 0.08, celah: 0.01, gulung: 0.3 },
+    f: { rahang: 0.03, bulat: 0.04, lebar: 0.04, tekan: 0.08, celah: 0.01, gulung: 0.3 },
   };
 
   it('ambang bawaan tidak pernah meloloskan satu bentuk sebagai dua bunyi', () => {
@@ -487,17 +487,17 @@ describe('e, f/v, w/y, dan h', () => {
   it('e di antara i dan a; f dibedakan dari bibir rapat dan i oleh gulungan bibir bawah', () => {
     const lolos = (f: Fitur) => SEMUA.filter((b) => nilaiBentuk(b, f).cocok);
     expect(lolos(BENTUK.e)).toEqual(['e']);
-    expect(lolos(BENTUK.F)).toEqual(['F']);
-    expect(lolos(BENTUK.M)).toEqual(['M']);
-    expect(nilaiBentuk('F', BENTUK.M).petunjuk).toBe('gigi_ke_bibir');
+    expect(lolos(BENTUK.f)).toEqual(['f']);
+    expect(lolos(BENTUK.m)).toEqual(['m']);
+    expect(nilaiBentuk('f', BENTUK.m).petunjuk).toBe('gigi_ke_bibir');
     expect(nilaiBentuk('e', DIAM).petunjuk).toBe('buka_sedikit');
   });
 
   it('w dinilai seperti u, y seperti i, h sebagai hembusan', () => {
-    expect(urutanDariTeks('wahyu')).toEqual(['u', 'a', 'H', 'i', 'u']);
-    expect(urutanDariTeks('maaf')).toEqual(['M', 'a', 'F']);
-    expect(urutanDariTeks('meja')).toEqual(['M', 'e', 'S', 'a']);
-    expect(urutanDariTeks('hiu')).toEqual(['H', 'i', 'u']);
+    expect(urutanDariTeks('wahyu')).toEqual(['u', 'a', 'h', 'i', 'u']);
+    expect(urutanDariTeks('maaf')).toEqual(['m', 'a', 'f']);
+    expect(urutanDariTeks('meja')).toEqual(['m', 'e', 's', 'a']);
+    expect(urutanDariTeks('hiu')).toEqual(['h', 'i', 'u']);
   });
 
   function jalankanNapas(urutan: Bunyi[], bagian: [Fitur, boolean, boolean, number][]) {
@@ -511,22 +511,22 @@ describe('e, f/v, w/y, dan h', () => {
   }
 
   it('h berhasil dengan mulut terbuka dan hembusan, bukan dengan suara bernada', () => {
-    expect(jalankanNapas(['H'], [[BENTUK.H, false, true, 20]]).hasil?.berhasil).toBe(true);
-    const bersuara = jalankanNapas(['H'], [[BENTUK.H, true, false, 30]]);
+    expect(jalankanNapas(['h'], [[BENTUK.h, false, true, 20]]).hasil?.berhasil).toBe(true);
+    const bersuara = jalankanNapas(['h'], [[BENTUK.h, true, false, 30]]);
     expect(bersuara.hasil).toBeNull();
     expect(bersuara.keadaan.petunjuk).toBe('hembuskan');
-    expect(jalankanNapas(['H'], [[BENTUK.M, false, true, 30]]).keadaan.petunjuk).toBe('buka_mulut');
+    expect(jalankanNapas(['h'], [[BENTUK.m, false, true, 30]]).keadaan.petunjuk).toBe('buka_mulut');
   });
 
   it('f boleh berupa hembusan (f) atau bersuara (v)', () => {
-    expect(jalankanNapas(['F'], [[BENTUK.F, false, true, 20]]).hasil?.berhasil).toBe(true);
-    expect(jalankanNapas(['F'], [[BENTUK.F, true, false, 20]]).hasil?.berhasil).toBe(true);
-    expect(jalankanNapas(['F'], [[BENTUK.F, false, false, 30]]).hasil).toBeNull();
+    expect(jalankanNapas(['f'], [[BENTUK.f, false, true, 20]]).hasil?.berhasil).toBe(true);
+    expect(jalankanNapas(['f'], [[BENTUK.f, true, false, 20]]).hasil?.berhasil).toBe(true);
+    expect(jalankanNapas(['f'], [[BENTUK.f, false, false, 30]]).hasil).toBeNull();
   });
 
   it('kata "hiu" dinilai sebagai hembusan, lalu i, lalu u', () => {
     const { hasil } = jalankanNapas(urutanDariTeks('hiu'), [
-      [BENTUK.H, false, true, 4],
+      [BENTUK.h, false, true, 4],
       [BENTUK.i, true, false, 5],
       [BENTUK.u, true, false, 5],
     ]);
@@ -558,25 +558,25 @@ describe('huruf lidah dinilai sebagian', () => {
   }
 
   it('desis butuh gigi hampir rapat dan derau desis, bukan suara bernada', () => {
-    expect(jalankanBunyi(['S'], [[BENTUK.S, false, true, 20]]).hasil?.berhasil).toBe(true);
-    const bersuara = jalankanBunyi(['S'], [[BENTUK.S, true, false, 30]]);
+    expect(jalankanBunyi(['s'], [[BENTUK.s, false, true, 20]]).hasil?.berhasil).toBe(true);
+    const bersuara = jalankanBunyi(['s'], [[BENTUK.s, true, false, 30]]);
     expect(bersuara.hasil).toBeNull();
     expect(bersuara.keadaan.petunjuk).toBe('desiskan');
-    expect(jalankanBunyi(['S'], [[BENTUK.a, false, true, 30]]).keadaan.petunjuk).toBe('gigi_rapat');
+    expect(jalankanBunyi(['s'], [[BENTUK.a, false, true, 30]]).keadaan.petunjuk).toBe('gigi_rapat');
   });
 
   it('huruf lidah butuh mulut sedikit terbuka dan bunyi apa pun (d bersuara, t letupan)', () => {
-    expect(jalankanBunyi(['T'], [[BENTUK.T, true, false, 20]]).hasil?.berhasil).toBe(true);
-    expect(jalankanBunyi(['T'], [[BENTUK.T, false, true, 20]]).hasil?.berhasil).toBe(true);
-    expect(jalankanBunyi(['T'], [[BENTUK.T, false, false, 30]]).hasil).toBeNull();
-    expect(jalankanBunyi(['T'], [[BENTUK.M, true, false, 30]]).keadaan.petunjuk).toBe('buka_mulut');
+    expect(jalankanBunyi(['t'], [[BENTUK.t, true, false, 20]]).hasil?.berhasil).toBe(true);
+    expect(jalankanBunyi(['t'], [[BENTUK.t, false, true, 20]]).hasil?.berhasil).toBe(true);
+    expect(jalankanBunyi(['t'], [[BENTUK.t, false, false, 30]]).hasil).toBeNull();
+    expect(jalankanBunyi(['t'], [[BENTUK.m, true, false, 30]]).keadaan.petunjuk).toBe('buka_mulut');
   });
 
   it('kata "susu": desis, u, desis, u', () => {
     const { hasil } = jalankanBunyi(urutanDariTeks('susu'), [
-      [BENTUK.S, false, true, 4],
+      [BENTUK.s, false, true, 4],
       [BENTUK.u, true, false, 4],
-      [BENTUK.S, false, true, 4],
+      [BENTUK.s, false, true, 4],
       [BENTUK.u, true, false, 4],
     ]);
     expect(hasil).toMatchObject({ berhasil: true, langkah_tercapai: 4 });

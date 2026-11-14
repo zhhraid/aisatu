@@ -105,8 +105,8 @@ const BENTUK_HURUF: Record<string, BentukTutorial> = {
 // Bentuk yang punya aturan di aturan.ts. "h" dinilai dari hembusan napas; desis dan
 // huruf lidah dinilai sebagian (posisi mulut dan suara, bukan lidah).
 const DINILAI: Partial<Record<BentukTutorial, Bunyi>> = {
-  a: 'a', i: 'i', u: 'u', e: 'e', o: 'o', katup: 'M', gigi_bibir: 'F', hembusan: 'H',
-  desis: 'S', lidah: 'T',
+  a: 'a', i: 'i', u: 'u', e: 'e', o: 'o', katup: 'm', gigi_bibir: 'f', hembusan: 'h',
+  desis: 's', lidah: 't',
 };
 
 /** Data tutorial untuk satu huruf. Huruf di luar a-z memakai bentuk netral. */
