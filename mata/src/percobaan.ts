@@ -1,4 +1,4 @@
-import { AMBANG_BAWAAN, nilaiBentuk, type Ambang, type Petunjuk } from './aturan';
+import { AMBANG_BAWAAN, kemiripan, nilaiBentuk, type Ambang, type Petunjuk } from './aturan';
 import type { Bunyi, Fitur } from './tipe';
 
 export interface OpsiPercobaan {
@@ -50,6 +50,8 @@ export interface Keadaan {
   progres: number;
   petunjuk: Petunjuk | 'bersuara' | null;
   sisaMs: number;
+  /** 0 sampai 1, kemiripan bentuk bibir frame ini dengan bentuk target (untuk bilah "Kemiripan"). */
+  kemiripan: number;
 }
 
 /** Bentuk yang dikirim ke backend (POST /ai/anak/{id}/percobaan), ditambah item_id. */
@@ -57,6 +59,17 @@ export interface HasilPercobaan {
   berhasil: boolean;
   langkah_tercapai: number;
   durasi_ms: number;
+  /** 0 sampai 1, rata-rata kemiripan bentuk bibir selama percobaan ("Akurasi" di layar). */
+  kemiripan: number;
+  /** 1 sampai 3. Gagal tetap dapat 1 bintang supaya anak tidak patah semangat. */
+  bintang: number;
+  poin: number;
+}
+
+/** Bintang dari hasil: berhasil dan mirip (>= 80%) = 3, berhasil = 2, belum berhasil = 1. */
+export function hitungBintang(berhasil: boolean, rataKemiripan: number): number {
+  if (!berhasil) return 1;
+  return rataKemiripan >= 0.8 ? 3 : 2;
 }
 
 /**
@@ -68,6 +81,8 @@ export class Percobaan {
   private tahan = 0;
   private lepas = 0;
   private aktifMs = 0;
+  private jumlahKemiripan = 0;
+  private kemiripanTerakhir = 0;
   private tSebelum: number | null = null;
   private status: StatusPercobaan = 'berjalan';
   private readonly opsi: OpsiPercobaan;
@@ -103,6 +118,7 @@ export class Percobaan {
       progres: Math.min(1, (this.langkah + bagian) / this.urutan.length),
       petunjuk,
       sisaMs: Math.max(0, this.opsi.batasMs - this.aktifMs),
+      kemiripan: this.kemiripanTerakhir,
     };
   }
 
@@ -118,6 +134,7 @@ export class Percobaan {
     if (!frame.fitur) {
       // Wajah hilang: waktu tidak berjalan dan percobaan tidak dihitung gagal.
       this.status = 'jeda';
+      this.kemiripanTerakhir = 0;
       return this.keadaan(false, frame.suara, null);
     }
     this.status = 'berjalan';
@@ -125,6 +142,8 @@ export class Percobaan {
 
     const target = this.urutan[this.langkah] as Bunyi;
     const bentuk = nilaiBentuk(target, frame.fitur, this.ambang, !this.tunggal);
+    this.kemiripanTerakhir = kemiripan(target, frame.fitur, this.ambang, !this.tunggal);
+    this.jumlahKemiripan += this.kemiripanTerakhir * dt;
     const suara = frame.suara || this.opsi.tanpaSuara;
     // Di dalam kata, bibir mengatup tidak perlu bersuara (b dan p memang senyap sesaat).
     const perluSuara = this.tunggal || target !== 'M';
@@ -154,10 +173,17 @@ export class Percobaan {
   /** Hasil akhir, atau null kalau percobaan belum selesai. */
   hasil(): HasilPercobaan | null {
     if (this.status !== 'berhasil' && this.status !== 'gagal') return null;
+    const berhasil = this.status === 'berhasil';
+    const rata =
+      this.aktifMs > 0 ? this.jumlahKemiripan / this.aktifMs : this.kemiripanTerakhir;
+    const bintang = hitungBintang(berhasil, rata);
     return {
-      berhasil: this.status === 'berhasil',
+      berhasil,
       langkah_tercapai: this.langkah,
       durasi_ms: Math.round(this.aktifMs),
+      kemiripan: Math.round(rata * 100) / 100,
+      bintang,
+      poin: bintang * 10,
     };
   }
 }

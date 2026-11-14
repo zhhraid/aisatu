@@ -100,6 +100,8 @@ function tampilkanUji(): void {
 
 function tampilkanKeadaan(k: Keadaan): void {
   (el('progres').firstElementChild as HTMLElement).style.width = `${k.progres * 100}%`;
+  (el('kemiripan').firstElementChild as HTMLElement).style.width = `${k.kemiripan * 100}%`;
+  el('angkaKemiripan').textContent = `${Math.round(k.kemiripan * 100)}%`;
   const petunjuk = el('petunjuk');
   if (k.status === 'jeda') petunjuk.textContent = 'Jeda: wajah tidak terlihat';
   else if (k.petunjuk === 'bersuara') petunjuk.textContent = 'Bentuk sudah benar, sekarang bersuara';
@@ -167,9 +169,10 @@ tombol('tombolCoba').addEventListener('click', async () => {
   tampilkanUji();
   const teksHasil = el('hasil');
   teksHasil.className = hasil.berhasil ? 'baik' : 'buruk';
+  const nilai = `${'★'.repeat(hasil.bintang)}${'☆'.repeat(3 - hasil.bintang)} · akurasi ${Math.round(hasil.kemiripan * 100)}% · ${hasil.poin} poin`;
   teksHasil.textContent = hasil.berhasil
-    ? `Berhasil dalam ${(hasil.durasi_ms / 1000).toFixed(1)} detik.`
-    : `Gagal: macet di langkah ${hasil.langkah_tercapai + 1} dari ${urutan.length}.`;
+    ? `Berhasil dalam ${(hasil.durasi_ms / 1000).toFixed(1)} detik. ${nilai}`
+    : `Gagal: macet di langkah ${hasil.langkah_tercapai + 1} dari ${urutan.length}. ${nilai}`;
   document.body.dataset['hasil'] = JSON.stringify(hasil);
   if (itemOtak) await kirimKeOtak(itemOtak.id, hasil);
 });

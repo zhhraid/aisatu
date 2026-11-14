@@ -102,6 +102,73 @@ export function nilaiBentuk(
   }
 }
 
+// ------------------------------------------------------------- kemiripan
+
+/** Seberapa dekat nilai ke syarat "minimal": 1 kalau sudah memenuhi. */
+function dekatMin(nilai: number, min: number): number {
+  if (min <= 0) return 1;
+  return Math.max(0, Math.min(1, nilai / min));
+}
+
+/** Seberapa dekat nilai ke syarat "maksimal": 1 kalau sudah memenuhi, turun linear sesudahnya. */
+function dekatMaks(nilai: number, maks: number): number {
+  if (nilai <= maks) return 1;
+  const rentang = Math.max(maks, 0.1);
+  return Math.max(0, 1 - (nilai - maks) / rentang);
+}
+
+/**
+ * Kemiripan bentuk bibir saat ini dengan bentuk target, 0 sampai 1, dihitung dari
+ * angka yang sama dengan aturan. Bernilai 1 hanya kalau aturannya terpenuhi,
+ * jadi angka ini dan keping hijau tidak pernah bertentangan.
+ */
+export function kemiripan(
+  bunyi: Bunyi,
+  f: Fitur,
+  ambang: Ambang = AMBANG_BAWAAN,
+  dalamKata = false,
+): number {
+  let bagian: number[];
+  switch (bunyi) {
+    case 'a':
+      bagian = [dekatMin(f.rahang, ambang.a.rahangMin), dekatMaks(f.bulat, ambang.a.bulatMaks)];
+      break;
+    case 'i':
+      bagian = [
+        dekatMin(f.lebar, ambang.i.lebarMin),
+        dekatMaks(f.rahang, ambang.i.rahangMaks),
+        dekatMaks(f.bulat, ambang.i.bulatMaks),
+      ];
+      break;
+    case 'u':
+      bagian = [dekatMin(f.bulat, ambang.u.bulatMin), dekatMaks(f.rahang, ambang.u.rahangMaks)];
+      break;
+    case 'o':
+      bagian = [
+        dekatMin(f.bulat, ambang.o.bulatMin),
+        dekatMin(f.rahang, ambang.o.rahangMin),
+        dekatMaks(f.rahang, ambang.o.rahangMaks),
+      ];
+      break;
+    case 'M':
+      bagian = [
+        dekatMaks(f.celah, ambang.M.celahMaks),
+        dekatMaks(f.rahang, ambang.M.rahangMaks),
+        dekatMin(f.tekan, ambang.M.tekanMin),
+        dalamKata ? 1 : dekatMaks(f.bulat, ambang.M.bulatMaks),
+      ];
+      break;
+  }
+  // Rata-rata geometris: satu syarat yang jauh meleset menurunkan nilai, tidak
+  // tertutupi syarat lain yang kebetulan terpenuhi.
+  const rata = Math.pow(
+    bagian.reduce((a, b) => a * b, 1),
+    1 / bagian.length,
+  );
+  // 100% disisakan untuk bentuk yang benar-benar lolos aturan.
+  return nilaiBentuk(bunyi, f, ambang, dalamKata).cocok ? 1 : Math.min(rata, 0.95);
+}
+
 const VOKAL = new Set(['a', 'i', 'u', 'o']);
 const BILABIAL = new Set(['m', 'b', 'p']);
 

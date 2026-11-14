@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { AMBANG_BAWAAN, nilaiBentuk, urutanDariTeks } from '../src/aturan';
+import { AMBANG_BAWAAN, kemiripan, nilaiBentuk, urutanDariTeks } from '../src/aturan';
 import { ambilBlendshape, celahBibir, hitungFitur, posisiWajah } from '../src/fitur';
 import { Kalibrasi } from '../src/kalibrasi';
-import { Percobaan, type FramePercobaan } from '../src/percobaan';
+import { hitungBintang, Percobaan, type FramePercobaan } from '../src/percobaan';
 import { hitungRms, PenentuSuara } from '../src/suara';
 import type { Bunyi, Fitur, Titik } from '../src/tipe';
 
@@ -270,5 +270,58 @@ describe('percobaan', () => {
     const k = p.proses({ t: 50, fitur: BENTUK.M, suara: false });
     expect(k).toMatchObject({ langkah: 1, target: 'a', jumlahLangkah: 2, progres: 0.5 });
     expect(() => new Percobaan([])).toThrow();
+  });
+});
+
+describe('kemiripan dan bintang', () => {
+  it('100% hanya kalau aturannya lolos, dan bentuk yang lebih dekat bernilai lebih tinggi', () => {
+    expect(kemiripan('a', BENTUK.a)).toBe(1);
+    const setengahBuka: Fitur = { ...DIAM, rahang: 0.25 };
+    const hampir: Fitur = { ...DIAM, rahang: 0.4 };
+    expect(kemiripan('a', DIAM)).toBeLessThan(kemiripan('a', setengahBuka));
+    expect(kemiripan('a', setengahBuka)).toBeLessThan(kemiripan('a', hampir));
+    expect(kemiripan('a', hampir)).toBeLessThanOrEqual(0.95);
+    for (const b of ['a', 'i', 'u', 'o', 'M'] as Bunyi[]) {
+      for (const f of [DIAM, ...Object.values(BENTUK)]) {
+        const k = kemiripan(b, f);
+        expect(k).toBeGreaterThanOrEqual(0);
+        expect(k === 1).toBe(nilaiBentuk(b, f).cocok);
+      }
+    }
+  });
+
+  it('bentuk lain jauh dari target', () => {
+    expect(kemiripan('u', BENTUK.a)).toBeLessThan(0.5);
+    expect(kemiripan('M', BENTUK.a)).toBeLessThan(0.5);
+  });
+
+  it('bintang: berhasil dan mirip 3, berhasil 2, belum berhasil tetap 1', () => {
+    expect(hitungBintang(true, 0.9)).toBe(3);
+    expect(hitungBintang(true, 0.6)).toBe(2);
+    expect(hitungBintang(false, 0.9)).toBe(1);
+  });
+
+  it('hasil percobaan memuat akurasi rata-rata, bintang, dan poin', () => {
+    const cepat = new Percobaan(['a'], AMBANG_BAWAAN);
+    let t = 0;
+    for (let i = 0; i < 20 && !cepat.hasil(); i++, t += 50) cepat.proses({ t, fitur: BENTUK.a, suara: true });
+    expect(cepat.hasil()).toMatchObject({ berhasil: true, kemiripan: 1, bintang: 3, poin: 30 });
+
+    // Lama mencari bentuk dulu: tetap berhasil, tapi akurasinya turun.
+    const lambat = new Percobaan(['a'], AMBANG_BAWAAN);
+    t = 0;
+    for (let i = 0; i < 40; i++, t += 50) lambat.proses({ t, fitur: DIAM, suara: true });
+    for (let i = 0; i < 20 && !lambat.hasil(); i++, t += 50) lambat.proses({ t, fitur: BENTUK.a, suara: true });
+    const h = lambat.hasil()!;
+    expect(h.berhasil).toBe(true);
+    expect(h.kemiripan).toBeLessThan(0.8);
+    expect([h.bintang, h.poin]).toEqual([2, 20]);
+  });
+
+  it('keadaan tiap frame membawa kemiripan untuk bilah di layar', () => {
+    const p = new Percobaan(['u'], AMBANG_BAWAAN);
+    expect(p.proses({ t: 0, fitur: BENTUK.u, suara: true }).kemiripan).toBe(1);
+    expect(p.proses({ t: 50, fitur: BENTUK.a, suara: true }).kemiripan).toBeLessThan(0.5);
+    expect(p.proses({ t: 100, fitur: null, suara: true }).kemiripan).toBe(0);
   });
 });

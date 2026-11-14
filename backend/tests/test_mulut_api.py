@@ -171,6 +171,7 @@ def test_alur_sesi_sampai_naik_tingkat(klien):
     assert (a["tingkat"], a["label"], a["warna"]) == (2, "sedang_dilatih", "merah")
     assert a["tingkat_tuntas"] == 1
     assert peta["hari_latihan_minggu_ini"] == 1 and peta["sintetis"] is False
+    assert peta["streak"] == 1 and jawab["streak"] == 1
 
 
 def test_tiga_gagal_memunculkan_istirahat(klien):

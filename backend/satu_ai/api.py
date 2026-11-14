@@ -136,6 +136,7 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
         return {
             "perubahan": perubahan,
             "tingkat_berhasil": otak.tingkat_berhasil(status),
+            "streak": otak.streak(status, sekarang),
             "berikutnya": otak.pilih_berikutnya(status, sekarang, rng).ke_dict(),
         }
 
@@ -148,6 +149,7 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
             "insight": otak.insight(status, sekarang),
             "tingkat_berhasil": otak.tingkat_berhasil(status),
             "hari_latihan_minggu_ini": otak.hari_latihan_minggu_ini(status, sekarang),
+            "streak": otak.streak(status, sekarang),
             "sintetis": status.sintetis,
         }
 
@@ -215,7 +217,7 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
                 status.kc[(bunyi, int(tingkat))] = otak.KC(
                     p=p, n=n, terakhir=waktu, tercapai_pada=tercapai, tuntas=p >= 0.95
                 )
-                status.hari_latihan.append(waktu.date().isoformat())
+                status.hari_latihan.append(otak.tanggal_lokal(waktu))
             status.hari_latihan = sorted(set(status.hari_latihan))
             simpanan.simpan(masukan.anak_id, status)
             return {"anak_id": masukan.anak_id, "profil": masukan.profil, "sintetis": True}

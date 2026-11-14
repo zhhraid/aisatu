@@ -36,6 +36,15 @@ JEDA_SESI_BARU = timedelta(minutes=30)
 MIN_PERCOBAAN_MACET = 6
 
 
+# Hari latihan dan streak dihitung menurut tanggal WIB, bukan UTC, supaya latihan
+# pukul 06.00 pagi tidak tercatat sebagai hari sebelumnya.
+WIB = timezone(timedelta(hours=7))
+
+
+def tanggal_lokal(t: datetime) -> str:
+    return t.astimezone(WIB).date().isoformat()
+
+
 def sekarang_utc() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -233,7 +242,7 @@ def catat_percobaan(
         status.turun = {"bunyi": macet, "tingkat": item.tingkat}
         status.gagal_beruntun = 0
 
-    tanggal = sekarang.date().isoformat()
+    tanggal = tanggal_lokal(sekarang)
     if tanggal not in status.hari_latihan:
         status.hari_latihan = (status.hari_latihan + [tanggal])[-60:]
     return perubahan
@@ -454,8 +463,22 @@ def insight(status: StatusAnak, sekarang: datetime) -> dict:
 
 
 def hari_latihan_minggu_ini(status: StatusAnak, sekarang: datetime) -> int:
-    batas = (sekarang - timedelta(days=6)).date().isoformat()
+    batas = tanggal_lokal(sekarang - timedelta(days=6))
     return sum(1 for tanggal in status.hari_latihan if tanggal >= batas)
+
+
+def streak(status: StatusAnak, sekarang: datetime) -> int:
+    """Jumlah hari berturut-turut berlatih. Tetap terhitung kalau hari ini belum
+    berlatih tapi kemarin sudah; putus kalau kemarin juga tidak berlatih."""
+    hari = set(status.hari_latihan)
+    tanggal = sekarang.astimezone(WIB).date()
+    if tanggal.isoformat() not in hari:
+        tanggal -= timedelta(days=1)
+    jumlah = 0
+    while tanggal.isoformat() in hari:
+        jumlah += 1
+        tanggal -= timedelta(days=1)
+    return jumlah
 
 
 # ----------------------------------------------------------------- tugas rumah

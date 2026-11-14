@@ -333,3 +333,21 @@ def test_hari_latihan_minggu_ini():
     for hari in (0, 1, 3, 9):
         catat(s, "t1-a", True, waktu=T0 - timedelta(days=hari))
     assert otak.hari_latihan_minggu_ini(s, T0) == 3
+
+
+def test_streak_hari_berturut_turut_menurut_wib():
+    s = otak.StatusAnak()
+    for hari in (0, 1, 2, 4):
+        catat(s, "t1-a", True, waktu=T0 - timedelta(days=hari))
+    assert otak.streak(s, T0) == 3  # hari ini, kemarin, lusa; hari ke-4 terputus
+    # Besok belum berlatih: streak masih 3. Lusa tanpa latihan: putus.
+    assert otak.streak(s, T0 + timedelta(days=1)) == 3
+    assert otak.streak(s, T0 + timedelta(days=2)) == 0
+    assert otak.streak(otak.StatusAnak(), T0) == 0
+
+
+def test_latihan_pagi_wib_tercatat_di_tanggal_wib():
+    s = otak.StatusAnak()
+    pagi_wib = datetime(2026, 11, 14, 23, 30, tzinfo=timezone.utc)  # 15 Nov 06.30 WIB
+    catat(s, "t1-a", True, waktu=pagi_wib)
+    assert s.hari_latihan == ["2026-11-15"]

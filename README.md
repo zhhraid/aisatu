@@ -14,8 +14,8 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 
 Sudah diuji:
 
-- Backend: 78 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
-- Mata: 27 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
+- Backend: 80 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
+- Mata: 32 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
 Belum diuji, dan harus kalian lakukan:
@@ -141,6 +141,7 @@ Jawabannya (contoh asli: kegagalan ketiga berturut-turut pada kata "bola", macet
 - `langkah_tercapai` = jumlah bentuk dalam `urutan` yang sudah dilewati. Kalau gagal, bentuk di posisi itu adalah tempat anak macet.
 - `istirahat: true` = tampilkan animasi istirahat (setelah 3 gagal beruntun).
 - `tingkat_berhasil` kosong (`null`) selama sesi belum berisi 5 percobaan.
+- `streak` = jumlah hari berturut-turut berlatih menurut tanggal WIB; juga ada di jawaban `/peta`.
 - Nama anak dikirim hanya ke endpoint teks (`{"nama": "Raka"}`) dan tidak diteruskan ke LLM.
 
 Nilai `alasan`: `zona` (pilihan biasa), `penguatan` (terlalu sering gagal, diberi yang mudah), `lebih_sulit` (terlalu sering berhasil), `lebih_mudah`, `turun_tingkat`, `ganti_bunyi`, `jelajah` (acak 1 dari 10), `ulang_tuntas`.
@@ -206,15 +207,16 @@ if (!kalibrasi.ok) { /* minta ulang: kalibrasi.alasan */ }
 
 // item datang dari Otak: { id, urutan, ... }
 const { hasil } = mata.percobaan(item.urutan, (keadaan) => {
-  // keadaan.progres, keadaan.petunjuk: gambar langsung ke canvas, jangan ke state React
+  // keadaan.progres, keadaan.petunjuk, keadaan.kemiripan (bilah "Kemiripan"):
+  // gambar langsung ke canvas, jangan ke state React
 });
-const akhir = await hasil;                      // { berhasil, langkah_tercapai, durasi_ms }
+const akhir = await hasil;                      // { berhasil, langkah_tercapai, durasi_ms, kemiripan, bintang, poin }
 if (akhir) await kirim({ item_id: item.id, ...akhir });
 ```
 
 ## Cara kerja singkat
 
-**Mata.** MediaPipe memberi 52 blendshape per frame; hanya 11 blendshape mulut yang dipakai, masing-masing dikurangi nilai wajah netral anak. Dari situ dihitung lima angka, lalu dibandingkan dengan ambang per bentuk. Bunyi tunggal berhasil kalau bentuk benar dan ada suara selama 0,7 detik. Kata dinilai sebagai urutan bentuk; bibir mengatup di dalam kata tidak perlu bersuara. Wajah hilang menjeda waktu, tidak dihitung gagal.
+**Mata.** MediaPipe memberi 52 blendshape per frame; hanya 11 blendshape mulut yang dipakai, masing-masing dikurangi nilai wajah netral anak. Dari situ dihitung lima angka, lalu dibandingkan dengan ambang per bentuk. Bunyi tunggal berhasil kalau bentuk benar dan ada suara selama 0,7 detik. Kata dinilai sebagai urutan bentuk; bibir mengatup di dalam kata tidak perlu bersuara. Wajah hilang menjeda waktu, tidak dihitung gagal. Kemiripan (0 sampai 100%) dihitung dari lima angka yang sama dengan aturan, dengan rata-rata geometris; 100% hanya kalau aturannya lolos. Akurasi di akhir percobaan adalah rata-rata kemiripan selama percobaan. Bintang: berhasil dan akurasi minimal 80% = 3, berhasil = 2, belum berhasil = 1; poin = bintang × 10.
 
 **Otak.** Satu angka penguasaan per bunyi × tingkat (5 × 4). Penguasaan sebuah kata = bunyi terlemahnya. Latihan berikutnya adalah yang perkiraan berhasilnya paling dekat ke 78%, dengan pengaman dari 10 percobaan terakhir. Parameter BKT bukan hasil fit data: dipilih lewat simulasi supaya anak yang berhasil 50% percobaan jarang dicap "sudah bisa" (sekitar 15% waktu) dan anak yang berhasil 80% hampir selalu (sekitar 97%).
 
