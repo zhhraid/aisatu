@@ -14,7 +14,7 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 
 Sudah diuji:
 
-- Backend: 98 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
+- Backend: 101 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
 - Mata: 36 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
@@ -157,12 +157,13 @@ Sumber dikumpulkan sekali, sebelum demo, dari laptop yang tersambung internet (s
 python skrip/kumpulkan_pengetahuan.py
 ```
 
-- Daftar sumber ada di `backend/pengetahuan/sumber.json`: PDF, halaman web, atau Wikipedia. Tambah sumber dengan menyalin satu blok, dan isi kolom `lisensi` (juknis poin d: data harus bebas hak cipta).
+- Daftar sumber ada di `backend/pengetahuan/sumber.json`: PDF, halaman web, Wikipedia, atau `tata_letak` (ekspor JSON berisi halaman dan elemen teks berposisi, dibaca dari berkas lokal).
+- Kolom `bobot` mengatur sumber mana yang didahulukan: buku panduan 1,5, ensiklopedia 0,5. Tambah sumber dengan menyalin satu blok, dan isi kolom `lisensi` (juknis poin d: data harus bebas hak cipta).
 - Pengumpul menghormati robots.txt, memberi jeda antar permintaan, dan mengulang kalau dibatasi.
 - Hasilnya `backend/satu_ai/data/pengetahuan.json`. Nyalakan ulang backend sesudahnya; `/ai/status` menunjukkan jumlah paragraf rujukan.
 - Pencarian rujukan memakai skor kata kunci (BM25) ditambah penanda bunyi dan pembaca, tanpa model tambahan, jadi ringan.
 
-Basis yang ada di repo sekarang baru berisi 15 paragraf dari Wikipedia, yang lebih banyak membahas teori bunyi daripada cara melatih anak. Buku Kemendikbud belum ikut karena harus diunduh dari laptop.
+Basis yang ada di repo berisi 525 paragraf: 510 dari *Panduan Guru Pengembangan Wicara bagi Peserta Didik dengan Hambatan Pendengaran* (Aini & Handriani, Kemendikbudristek 2024, halaman cetak 1 sampai 215) dan 15 dari Wikipedia. Buku itu dibaca dari `Pengembangan_Wicara_BG.json` di folder utama repo. Nomor `halaman` di rujukan adalah nomor halaman cetak buku. Buku tersebut berhak cipta Kemendikbudristek, jadi dipakai sebagai kutipan pendidikan dengan menyebut sumber.
 
 ### Menyimpan ke database
 

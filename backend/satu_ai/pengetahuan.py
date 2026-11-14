@@ -83,7 +83,8 @@ class Pengetahuan:
     def cari(self, bunyi: list[str], pembaca: str, k: int = 3) -> list[dict]:
         """Paragraf paling relevan untuk bunyi yang lemah dan pembaca tertentu.
 
-        Paling banyak dua paragraf dari sumber yang sama, supaya rujukannya beragam.
+        Paragraf yang skornya di bawah seperempat skor terbaik dibuang, supaya yang
+        dikirim ke LLM hanya rujukan yang memang relevan, bukan pengisi.
         """
         if not self.paragraf:
             return []
@@ -92,19 +93,23 @@ class Pengetahuan:
         nilai = []
         for i, p in enumerate(self.paragraf):
             skor = self._bm25(i, kueri)
-            skor += 2.0 * len(set(p.get("bunyi", [])) & set(bunyi))
+            tanda = set(p.get("bunyi", []))
+            skor += 2.0 * len(tanda & set(bunyi))
+            if tanda and not tanda & set(bunyi):
+                skor -= 1.5  # membahas bunyi lain
             skor += 1.5 if pembaca in p.get("pembaca", []) else 0
+            # Bobot sumber dari sumber.json: buku panduan lebih dipercaya daripada ensiklopedia.
+            skor *= self.sumber.get(p["sumber"], {}).get("bobot") or 1.0
             if skor > 0:
                 nilai.append((skor, i))
         nilai.sort(reverse=True)
 
         hasil: list[dict] = []
-        per_sumber: Counter = Counter()
-        for _, i in nilai:
+        terbaik = nilai[0][0] if nilai else 0
+        for skor, i in nilai:
+            if skor < 0.25 * terbaik:
+                break
             p = self.paragraf[i]
-            if per_sumber[p["sumber"]] >= 2:
-                continue
-            per_sumber[p["sumber"]] += 1
             s = self.sumber.get(p["sumber"], {})
             hasil.append(
                 {

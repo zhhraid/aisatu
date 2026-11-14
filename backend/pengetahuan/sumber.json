@@ -1,5 +1,5 @@
 {
-  "keterangan": "Daftar sumber untuk skrip/kumpulkan_pengetahuan.py. Tambah sumber dengan menyalin satu blok. jenis: pdf, html, atau wikipedia. Isi lisensi sesuai yang tertulis di sumbernya (juknis poin d). aktif: false untuk melewati.",
+  "keterangan": "Daftar sumber untuk skrip/kumpulkan_pengetahuan.py. Tambah sumber dengan menyalin satu blok. jenis: pdf, html, wikipedia, atau tata_letak (ekspor JSON berisi halaman dan elemen teks berposisi, dibaca dari berkas lokal). Isi lisensi sesuai yang tertulis di sumbernya (juknis poin d). aktif: false untuk melewati. bobot: pengali skor saat memilih rujukan (buku panduan 1.5, ensiklopedia 0.5).",
   "sumber": [
     {
       "id": "kemdikbud-bg-rungu",
@@ -8,16 +8,25 @@
       "jenis": "pdf",
       "url": "https://static.buku.kemdikbud.go.id/content/pdf/bukuteks/kurikulum21/Diksus-BG-Rungu.pdf",
       "lisensi": "Buku Kemendikbudristek yang dibagikan bebas; cek halaman hak cipta di buku",
-      "aktif": true
+      "aktif": true,
+      "bobot": 1.5
     },
     {
       "id": "kemdikbud-wicara-2024",
       "judul": "Panduan Guru Pengembangan Wicara bagi Peserta Didik dengan Hambatan Pendengaran (Aini & Handriani, 2024)",
-      "penerbit": "Kemendikbudristek",
-      "jenis": "pdf",
-      "url": "ISI_DENGAN_TAUTAN_PDF_DARI_buku.kemdikbud.go.id",
-      "lisensi": "cek halaman hak cipta di buku",
-      "aktif": false
+      "penerbit": "Kemendikbudristek, Pusat Perbukuan. ISBN 978-634-00-1060-2",
+      "jenis": "tata_letak",
+      "berkas": "../Pengembangan_Wicara_BG.json",
+      "url": "https://buku.kemdikbud.go.id",
+      "halaman": [
+        19,
+        233
+      ],
+      "geser_halaman": 18,
+      "buang": "Panduan Guru Pengembangan Wicara\\s+bagi Peserta Didik dengan Hambatan Pendengaran( \\d+)?|untuk SDLB, SMPLB, SMALB|\\d{1,3}|[ivxl]{1,6}",
+      "lisensi": "Hak cipta Kemendikbudristek. Dipakai sebagai kutipan untuk pendidikan dengan menyebut sumber; buku tidak disebarkan ulang.",
+      "aktif": true,
+      "bobot": 1.5
     },
     {
       "id": "wiki-ketulian",
@@ -26,7 +35,8 @@
       "jenis": "wikipedia",
       "judul_halaman": "Ketulian",
       "lisensi": "CC BY-SA 4.0",
-      "aktif": true
+      "aktif": true,
+      "bobot": 0.5
     },
     {
       "id": "wiki-vokal",
@@ -35,7 +45,8 @@
       "jenis": "wikipedia",
       "judul_halaman": "Vokal",
       "lisensi": "CC BY-SA 4.0",
-      "aktif": true
+      "aktif": true,
+      "bobot": 0.5
     },
     {
       "id": "wiki-dwibibir",
@@ -44,7 +55,8 @@
       "jenis": "wikipedia",
       "judul_halaman": "Konsonan dwibibir",
       "lisensi": "CC BY-SA 4.0",
-      "aktif": true
+      "aktif": true,
+      "bobot": 0.5
     },
     {
       "id": "wiki-membaca-bibir",
@@ -53,7 +65,8 @@
       "jenis": "wikipedia",
       "judul_halaman": "Membaca bibir",
       "lisensi": "CC BY-SA 4.0",
-      "aktif": true
+      "aktif": true,
+      "bobot": 0.5
     },
     {
       "id": "wiki-terapi-wicara",
@@ -62,7 +75,8 @@
       "jenis": "wikipedia",
       "judul_halaman": "Terapi wicara",
       "lisensi": "CC BY-SA 4.0",
-      "aktif": true
+      "aktif": true,
+      "bobot": 0.5
     }
   ]
 }

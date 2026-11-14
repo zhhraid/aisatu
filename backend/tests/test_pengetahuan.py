@@ -79,10 +79,52 @@ def test_cari_mengutamakan_bunyi_dan_pembaca_yang_sesuai():
     assert b.cari(["M"], "guru", k=1)[0]["teks"].startswith("Untuk bunyi bilabial")
 
 
-def test_cari_paling_banyak_dua_dari_sumber_yang_sama():
-    b = basis(*[("s1", f"Latihan vokal a nomor {i}. " + ISI) for i in range(5)], ("s2", "Latihan vokal a di kelas. " + ISI))
-    hasil = b.cari(["a"], "guru", k=3)
-    assert [h["judul"] for h in hasil].count("Buku A") == 2 and len(hasil) == 3
+def test_cari_paling_banyak_k_rujukan():
+    b = basis(*[("s1", f"Latihan vokal a nomor {i}. " + ISI) for i in range(5)])
+    assert len(b.cari(["a"], "guru", k=3)) == 3
+
+
+def test_bobot_sumber_mendahulukan_buku_dan_pengisi_lemah_dibuang():
+    data = {
+        "sumber": [{"id": "s1", "judul": "Buku", "bobot": 1.5}, {"id": "s2", "judul": "Ensiklopedia", "bobot": 0.5}],
+        "paragraf": [
+            {"id": "P1", "sumber": "s2", "teks": "Vokal u adalah vokal belakang tertutup bundar. " + ISI, "bunyi": ["u"], "pembaca": []},
+            {"id": "P2", "sumber": "s1", "teks": "Latih vokal u dengan bibir maju di depan cermin. " + ISI, "bunyi": ["u"], "pembaca": ["guru"]},
+            {"id": "P3", "sumber": "s2", "teks": "Sejarah singkat sekolah dan bicara umum. " + ISI, "bunyi": [], "pembaca": []},
+        ],
+    }
+    hasil = pengetahuan.Pengetahuan(data).cari(["u"], "guru", k=3)
+    # Buku jauh lebih kuat; ensiklopedia dan paragraf umum jatuh di bawah seperempat skornya.
+    assert [h["judul"] for h in hasil] == ["Buku"]
+    tanpa_buku = pengetahuan.Pengetahuan({**data, "paragraf": [data["paragraf"][0], data["paragraf"][2]]})
+    assert [h["teks"][:5] for h in tanpa_buku.cari(["u"], "guru", k=3)] == ["Vokal"]
+
+
+def test_pembaca_tata_letak_menyusun_teks_dan_membersihkannya(tmp_path):
+    def teks(x, y, isi):
+        return {"type": "text", "x": x, "y": y, "height": 16, "fontSize": 13, "text": isi}
+
+    halaman = [
+        {"children": [teks(50, 900, "Panduan Guru Pengembangan Wicara  bagi Peserta Didik dengan Hambatan Pendengaran 42"),
+                      teks(50, 120, "dengan bibir."), teks(50, 100, "Orang tua melatih <span style='x'>vokal</span> u"),
+                      {"type": "group", "x": 10, "y": 300, "children": [teks(40, 0, "hambatan ȑsik &amp; Ȓeksibel")]},
+                      teks(300, 920, "untuk SDLB, SMPLB, SMALB")]},
+    ]
+    berkas = tmp_path / "buku.json"
+    berkas.write_text(json.dumps({"pages": [{}] * 18 + halaman}), encoding="utf-8")
+    sumber = {"halaman": [19, 19], "geser_halaman": 18,
+              "buang": r"Panduan Guru Pengembangan Wicara\s+bagi Peserta Didik dengan Hambatan Pendengaran( \d+)?|untuk SDLB, SMPLB, SMALB|\d{1,3}"}
+    [(isi, nomor)] = pengumpul.teks_tata_letak(berkas, sumber)
+    assert nomor == 1  # halaman cetak = halaman berkas dikurangi 18
+    assert isi == "Orang tua melatih vokal u\ndengan bibir.\n\nhambatan fisik & fleksibel"
+
+
+def test_basis_yang_disertakan_berisi_buku_panduan():
+    b = pengetahuan.muat()
+    assert "kemdikbud-wicara-2024" in b.sumber
+    rujukan = b.cari(["M"], "guru", k=3)
+    assert rujukan and all(r["judul"].startswith("Panduan Guru Pengembangan Wicara") for r in rujukan)
+    assert all(isinstance(r["halaman"], int) for r in rujukan)
 
 
 def test_basis_kosong_tidak_membuat_galat(tmp_path):
