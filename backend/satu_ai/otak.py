@@ -534,3 +534,34 @@ def usul_tugas(status: StatusAnak, sekarang: datetime, jumlah: int = 3) -> list[
             }
         )
     return hasil
+
+
+def fokus_belajar(status: StatusAnak, sekarang: datetime, jumlah: int = 3) -> list[dict]:
+    """Bunyi yang paling perlu dilatih, dari data anak: yang macet dulu, lalu yang
+    paling banyak lupa, lalu yang penguasaannya paling rendah. Satu baris per bunyi."""
+    calon = []
+    macet = {(m["bunyi"], m["tingkat"]) for m in insight(status, sekarang)["macet"]}
+    for (bunyi, tingkat), k in status.kc.items():
+        if k.n == 0:
+            continue
+        p = p_kini(status, bunyi, tingkat, sekarang)
+        turun = k.p - p
+        if (bunyi, tingkat) in macet:
+            alasan, urut = "macet", (0, p)
+        elif turun >= 0.1:
+            alasan, urut = "lupa", (1, -turun)
+        elif p < AMBANG_SUDAH_BISA:
+            alasan, urut = "lemah", (2, p)
+        else:
+            continue
+        calon.append((urut, -tingkat, bunyi, tingkat, p, alasan))
+    calon.sort()
+    hasil, dipakai = [], set()
+    for _, _, bunyi, tingkat, p, alasan in calon:
+        if bunyi in dipakai:
+            continue
+        dipakai.add(bunyi)
+        hasil.append({"bunyi": bunyi, "tingkat": tingkat, "label": label_penguasaan(p), "alasan": alasan})
+        if len(hasil) >= jumlah:
+            break
+    return hasil

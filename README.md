@@ -14,7 +14,7 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 
 Sudah diuji:
 
-- Backend: 80 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
+- Backend: 98 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
 - Mata: 36 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
@@ -89,6 +89,7 @@ Semua di bawah `/ai`. Belum ada login; tambahkan saat router dipasang ke aplikas
 | `POST /ai/anak/{id}/tugas-usulan` | mobile guru | 3 latihan rumah beserta alasannya |
 | `POST /ai/anak/{id}/laporan-mingguan` | web orang tua | Laporan tiga bagian |
 | `POST /ai/kelas/ringkasan` | mobile guru | Ringkasan kelas 2 sampai 3 kalimat |
+| `POST /ai/anak/{id}/saran-belajar` | mobile guru | 2 sampai 3 saran belajar dari data anak dan rujukan, beserta sumbernya |
 | `POST /ai/demo/isi` | demo | Mengisi satu anak dengan data buatan (hanya saat `SATU_DEMO=1`) |
 
 Kirim hasil percobaan:
@@ -145,6 +146,23 @@ Jawabannya (contoh asli: kegagalan ketiga berturut-turut pada kata "bola", macet
 - Nama anak dikirim hanya ke endpoint teks (`{"nama": "Raka"}`) dan tidak diteruskan ke LLM.
 
 Nilai `alasan`: `zona` (pilihan biasa), `penguatan` (terlalu sering gagal, diberi yang mudah), `lebih_sulit` (terlalu sering berhasil), `lebih_mudah`, `turun_tingkat`, `ganti_bunyi`, `jelajah` (acak 1 dari 10), `ulang_tuntas`.
+
+### Rujukan: buku Kemendikbud, web, dan data anak
+
+Saran belajar (untuk guru) dan cara membantu di laporan orang tua disusun dari dua dasar: data latihan anak (bunyi yang macet, mulai lupa, atau masih lemah) dan paragraf rujukan dari sumber yang dikumpulkan. Gemini hanya boleh menyarankan dari dua dasar itu dan wajib menyebut kode rujukannya; sumber yang dipakai ikut dikirim di field `rujukan` (judul, tautan, halaman). Kalau Gemini menyebut rujukan yang tidak ada, jawabannya ditolak dan dipakai templat yang disusun dari data anak.
+
+Sumber dikumpulkan sekali, sebelum demo, dari laptop yang tersambung internet (server buku Kemendikbud tidak bisa dijangkau dari luar Indonesia):
+
+```bash
+python skrip/kumpulkan_pengetahuan.py
+```
+
+- Daftar sumber ada di `backend/pengetahuan/sumber.json`: PDF, halaman web, atau Wikipedia. Tambah sumber dengan menyalin satu blok, dan isi kolom `lisensi` (juknis poin d: data harus bebas hak cipta).
+- Pengumpul menghormati robots.txt, memberi jeda antar permintaan, dan mengulang kalau dibatasi.
+- Hasilnya `backend/satu_ai/data/pengetahuan.json`. Nyalakan ulang backend sesudahnya; `/ai/status` menunjukkan jumlah paragraf rujukan.
+- Pencarian rujukan memakai skor kata kunci (BM25) ditambah penanda bunyi dan pembaca, tanpa model tambahan, jadi ringan.
+
+Basis yang ada di repo sekarang baru berisi 15 paragraf dari Wikipedia, yang lebih banyak membahas teori bunyi daripada cara melatih anak. Buku Kemendikbud belum ikut karena harus diunduh dari laptop.
 
 ### Menyimpan ke database
 

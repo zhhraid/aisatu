@@ -40,7 +40,9 @@ def _gabung(daftar: list[str]) -> str:
 # ---------------------------------------------------------------------- pagar
 
 
-def periksa_teks(teks: object, maks_kata: int, kata_boleh: set[str] | None = None) -> str | None:
+def periksa_teks(
+    teks: object, maks_kata: int, kata_boleh: set[str] | None = None, boleh_angka: bool = False
+) -> str | None:
     """Mengembalikan alasan penolakan, atau None kalau lolos.
 
     kata_boleh diisi hanya untuk alasan tugas: teks tidak boleh menyebut kata latihan
@@ -49,7 +51,7 @@ def periksa_teks(teks: object, maks_kata: int, kata_boleh: set[str] | None = Non
     """
     if not isinstance(teks, str) or not teks.strip():
         return "kosong"
-    if _ANGKA.search(teks):
+    if "%" in teks or (not boleh_angka and _ANGKA.search(teks)):
         return "memuat angka"
     kata = re.findall(r"[a-zA-Z]+", teks.lower())
     if len(kata) > maks_kata:
@@ -205,11 +207,13 @@ async def ringkasan_kelas(anak: list[dict], pemanggil: PemanggilLLM | None = Non
 SISTEM_LAPORAN = (
     "Tulis laporan singkat untuk orang tua anak tunarungu. Nada hangat dan apa adanya, tanpa "
     "istilah teknis. Tiga bagian: yang sudah bisa, yang sedang dilatih, cara membantu di rumah. "
-    "Untuk cara membantu, pakai tips yang diberikan dengan kata-katamu sendiri; jangan menambah "
-    "tips lain. Jangan menyebut angka, jangan membandingkan dengan anak lain, jangan menjanjikan "
-    "hasil. Sebut anak sebagai ANAK. "
-    'Jawab hanya JSON: {"sudah_bisa": "...", "sedang_dilatih": "...", "cara_membantu": "..."} '
-    "tiap bagian paling banyak 30 kata."
+    "Untuk cara membantu, pakai tips yang diberikan dan isi rujukan (kalau ada) dengan "
+    "kata-katamu sendiri; jangan menambah saran yang tidak ada di situ. Jangan menyebut angka, "
+    "jangan membandingkan dengan anak lain, jangan menjanjikan hasil, jangan memberi saran "
+    "medis. Sebut anak sebagai ANAK. "
+    'Jawab hanya JSON: {"sudah_bisa": "...", "sedang_dilatih": "...", "cara_membantu": "...", '
+    '"rujukan": ["R1"]} tiap bagian paling banyak 30 kata. "rujukan" berisi kode rujukan yang '
+    'dipakai untuk cara membantu, atau ["TIPS"] kalau hanya memakai tips.'
 )
 
 _BAGIAN_LAPORAN = ("sudah_bisa", "sedang_dilatih", "cara_membantu")
@@ -242,7 +246,36 @@ def _templat_laporan(data: dict) -> dict:
     }
 
 
-async def laporan_mingguan(data: dict, nama: str, pemanggil: PemanggilLLM | None = None) -> dict:
+def _rujukan_llm(rujukan: list[dict]) -> list[dict]:
+    """Rujukan untuk LLM: kode R1, R2, ... dan teks yang dipotong supaya hemat token."""
+    return [
+        {"kode": f"R{i}", "sumber": r["judul"], "isi": " ".join(r["teks"].split()[:110])}
+        for i, r in enumerate(rujukan, start=1)
+    ]
+
+
+def _rujukan_dipakai(jawab: object, rujukan: list[dict], boleh_tips: bool) -> list[dict] | None:
+    """Sumber yang disebut LLM. None kalau kode tidak sah atau tidak ada yang disebut."""
+    kode = jawab if isinstance(jawab, list) else None
+    if not kode or not all(isinstance(k, str) for k in kode):
+        return None
+    sah = {f"R{i}": r for i, r in enumerate(rujukan, start=1)}
+    hasil = []
+    for k in dict.fromkeys(kode):
+        if k in sah:
+            r = sah[k]
+            hasil.append({"judul": r["judul"], "url": r.get("url"), "halaman": r.get("halaman")})
+        elif not (boleh_tips and k == "TIPS"):
+            return None
+    return hasil
+
+
+async def laporan_mingguan(
+    data: dict,
+    nama: str,
+    pemanggil: PemanggilLLM | None = None,
+    rujukan: list[dict] | None = None,
+) -> dict:
     """data = {"sudah_bisa": [{"bunyi", "tingkat"}], "sedang_dilatih": [{"bunyi", "tingkat"}],
     "hari_latihan": int, "tips": str}. Satu bunyi boleh muncul di keduanya: sudah bisa di
     tahap bawah dan sedang berlatih di tahap atasnya."""
@@ -257,13 +290,113 @@ async def laporan_mingguan(data: dict, nama: str, pemanggil: PemanggilLLM | None
         "sedang_dilatih": untuk_llm(data["sedang_dilatih"]),
         "rutinitas_minggu_ini": "hampir setiap hari" if hari >= 5 else "beberapa hari" if hari >= 2 else "jarang",
         "tips": data["tips"],
+        "rujukan": _rujukan_llm(rujukan or []),
     }
     jawab = await pemanggil(SISTEM_LAPORAN, json.dumps(masukan, ensure_ascii=False))
 
-    bagian, sumber = _templat_laporan(data), "templat"
+    bagian, sumber, dipakai = _templat_laporan(data), "templat", []
     if jawab and all(periksa_teks(jawab.get(k), 30) is None for k in _BAGIAN_LAPORAN):
-        bagian = {k: jawab[k].strip() for k in _BAGIAN_LAPORAN}
-        sumber = "llm"
+        sebutan = _rujukan_dipakai(jawab.get("rujukan", ["TIPS"]), rujukan or [], boleh_tips=True)
+        if sebutan is not None:
+            bagian = {k: jawab[k].strip() for k in _BAGIAN_LAPORAN}
+            sumber, dipakai = "llm", sebutan
+        else:
+            log.warning("Laporan mingguan menyebut rujukan yang tidak ada, pakai templat: %r", str(jawab)[:300])
     elif jawab:
         log.warning("Laporan mingguan dari LLM ditolak pagar, pakai templat: %r", str(jawab)[:300])
-    return {**{k: _isi_nama(v, nama) for k, v in bagian.items()}, "hari_latihan": hari, "sumber": sumber}
+    return {
+        **{k: _isi_nama(v, nama) for k, v in bagian.items()},
+        "hari_latihan": hari,
+        "rujukan": dipakai,
+        "sumber": sumber,
+    }
+
+
+# ------------------------------------------------- D. saran belajar untuk guru
+
+SISTEM_SARAN = (
+    "Kamu membantu guru bina wicara di SLB menyusun saran belajar untuk satu anak tunarungu. "
+    "Dasarnya dua hal saja: data latihan anak dan isi rujukan yang diberikan. Tulis dua sampai "
+    "tiga saran kegiatan yang konkret, masing-masing satu atau dua kalimat, untuk bunyi yang "
+    "paling perlu dilatih. Setiap saran wajib menyebut kode rujukan yang mendasarinya, atau "
+    '"DATA" kalau hanya berdasar data latihan. Jangan mengarang fakta, jangan menyebut persen, '
+    "jangan memberi diagnosis atau saran medis. Sebut anak sebagai ANAK. "
+    'Jawab hanya JSON: {"saran": [{"teks": "...", "rujukan": ["R1"]}]} tiap teks paling banyak 40 kata.'
+)
+
+_PETUNJUK_BUNYI = {
+    "a": "buka mulut lebar",
+    "i": "tarik bibir ke samping",
+    "u": "kerucutkan bibir",
+    "o": "bulatkan bibir dan buka sedikit",
+    "M": "rapatkan kedua bibir lalu buka",
+}
+
+
+def _templat_saran(fokus: list[dict]) -> list[dict]:
+    hasil = []
+    for f in fokus[:3]:
+        bunyi = nama_bunyi(f["bunyi"])
+        alasan = {
+            "macet": "belum naik meski sudah sering dicoba",
+            "lupa": "mulai menurun karena lama tidak dilatih",
+            "lemah": "penguasaannya masih rendah",
+        }[f["alasan"]]
+        hasil.append(
+            {
+                "teks": f"Bunyi {bunyi} {alasan}. Latih di tahap {NAMA_TAHAP[f['tingkat']]} "
+                f"di depan cermin: {_PETUNJUK_BUNYI.get(f['bunyi'], 'tiru bentuk bibir guru')}.",
+                "rujukan": [],
+            }
+        )
+    return hasil
+
+
+async def saran_belajar(
+    fokus: list[dict],
+    nama: str,
+    rujukan: list[dict],
+    pemanggil: PemanggilLLM | None = None,
+) -> dict:
+    """fokus = [{"bunyi", "tingkat", "label", "alasan": "macet"|"lupa"|"lemah"}] dari Otak."""
+    pemanggil = pemanggil or llm.panggil_json
+    cadangan = {"saran": _templat_saran(fokus), "sumber": "templat"}
+    if not fokus:
+        return {"saran": [], "sumber": "templat"}
+
+    masukan = {
+        "data_latihan": [
+            {
+                "bunyi": nama_bunyi(f["bunyi"]),
+                "tahap": NAMA_TAHAP[f["tingkat"]],
+                "status": TEKS_LABEL[f["label"]],
+                "catatan": {"macet": "sering dicoba tapi belum naik", "lupa": "mulai menurun", "lemah": "masih rendah"}[f["alasan"]],
+            }
+            for f in fokus
+        ],
+        "rujukan": _rujukan_llm(rujukan),
+    }
+    jawab = await pemanggil(SISTEM_SARAN, json.dumps(masukan, ensure_ascii=False))
+    butir = jawab.get("saran") if jawab else None
+    if not isinstance(butir, list) or not 1 <= len(butir) <= 3:
+        if jawab:
+            log.warning("Saran belajar dari LLM ditolak (bentuk), pakai templat: %r", str(jawab)[:300])
+        return {**cadangan, "saran": [{**s, "teks": _isi_nama(s["teks"], nama)} for s in cadangan["saran"]]}
+
+    hasil = []
+    for b in butir:
+        teks = b.get("teks") if isinstance(b, dict) else None
+        if periksa_teks(teks, 40, boleh_angka=True) is not None:
+            log.warning("Saran belajar ditolak pagar, pakai templat: %r", str(jawab)[:300])
+            hasil = None
+            break
+        kode = [k for k in b.get("rujukan", []) if k != "DATA"] if isinstance(b.get("rujukan"), list) else None
+        sebutan = _rujukan_dipakai(kode, rujukan, boleh_tips=False) if kode else ([] if b.get("rujukan") == ["DATA"] else None)
+        if sebutan is None:
+            log.warning("Saran belajar menyebut rujukan yang tidak ada, pakai templat: %r", str(jawab)[:300])
+            hasil = None
+            break
+        hasil.append({"teks": _isi_nama(teks.strip(), nama), "rujukan": sebutan})
+    if hasil is None:
+        return {**cadangan, "saran": [{**s, "teks": _isi_nama(s["teks"], nama)} for s in cadangan["saran"]]}
+    return {"saran": hasil, "sumber": "llm"}

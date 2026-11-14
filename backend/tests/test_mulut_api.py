@@ -5,7 +5,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from satu_ai import llm, mulut, otak
+from satu_ai import llm, mulut, otak, pengetahuan
 from satu_ai.api import buat_router
 from satu_ai.kurikulum import ITEM_PER_ID
 
@@ -225,6 +225,7 @@ def test_kurikulum_dan_status(klien):
         "llm_tersedia": False,
         "llm_kurang": ["LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL"],
         "berkas_env": "tidak dimuat",
+        "paragraf_rujukan": len(pengetahuan.muat()),
         "mode_demo": True,
     }
 

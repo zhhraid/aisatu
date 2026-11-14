@@ -15,7 +15,7 @@ from datetime import timedelta
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from . import llm, mulut, otak, pengaturan
+from . import llm, mulut, otak, pengaturan, pengetahuan
 from .kurikulum import (
     BUNYI,
     ITEM,
@@ -99,6 +99,7 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
             "llm_tersedia": llm.tersedia(),
             "llm_kurang": llm.kurang(),  # nama pengaturan yang belum diisi
             "berkas_env": pengaturan.STATUS["berkas_env"],
+            "paragraf_rujukan": len(pengetahuan.muat()),
             "mode_demo": mode_demo,
         }
 
@@ -180,7 +181,18 @@ def buat_router(penyimpanan: Penyimpanan | None = None, demo: bool | None = None
             "hari_latihan": otak.hari_latihan_minggu_ini(status, sekarang),
             "tips": TIPS_PENDAMPING[minggu % len(TIPS_PENDAMPING)],
         }
-        return await mulut.laporan_mingguan(data, masukan.nama)
+        dilatih = [d["bunyi"] for d in data["sedang_dilatih"]]
+        rujukan = pengetahuan.muat().cari(dilatih, "orang_tua", k=3)
+        return await mulut.laporan_mingguan(data, masukan.nama, rujukan=rujukan)
+
+    @router.post("/anak/{anak_id}/saran-belajar")
+    async def saran_belajar(anak_id: str, masukan: MasukanNama) -> dict:
+        """Saran belajar untuk guru: dari data latihan anak dan rujukan yang dikumpulkan."""
+        sekarang = otak.sekarang_utc()
+        fokus = otak.fokus_belajar(simpanan.muat(anak_id), sekarang)
+        rujukan = pengetahuan.muat().cari([f["bunyi"] for f in fokus], "guru", k=3)
+        hasil = await mulut.saran_belajar(fokus, masukan.nama, rujukan)
+        return {"fokus": fokus, **hasil}
 
     @router.post("/kelas/ringkasan")
     async def ringkasan_kelas(masukan: MasukanKelas) -> dict:

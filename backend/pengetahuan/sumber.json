@@ -1,0 +1,68 @@
+{
+  "keterangan": "Daftar sumber untuk skrip/kumpulkan_pengetahuan.py. Tambah sumber dengan menyalin satu blok. jenis: pdf, html, atau wikipedia. Isi lisensi sesuai yang tertulis di sumbernya (juknis poin d). aktif: false untuk melewati.",
+  "sumber": [
+    {
+      "id": "kemdikbud-bg-rungu",
+      "judul": "Buku Panduan Guru Pendidikan Khusus Peserta Didik Disabilitas Rungu",
+      "penerbit": "Kemendikbudristek",
+      "jenis": "pdf",
+      "url": "https://static.buku.kemdikbud.go.id/content/pdf/bukuteks/kurikulum21/Diksus-BG-Rungu.pdf",
+      "lisensi": "Buku Kemendikbudristek yang dibagikan bebas; cek halaman hak cipta di buku",
+      "aktif": true
+    },
+    {
+      "id": "kemdikbud-wicara-2024",
+      "judul": "Panduan Guru Pengembangan Wicara bagi Peserta Didik dengan Hambatan Pendengaran (Aini & Handriani, 2024)",
+      "penerbit": "Kemendikbudristek",
+      "jenis": "pdf",
+      "url": "ISI_DENGAN_TAUTAN_PDF_DARI_buku.kemdikbud.go.id",
+      "lisensi": "cek halaman hak cipta di buku",
+      "aktif": false
+    },
+    {
+      "id": "wiki-ketulian",
+      "judul": "Ketulian (Wikipedia bahasa Indonesia)",
+      "penerbit": "Wikipedia",
+      "jenis": "wikipedia",
+      "judul_halaman": "Ketulian",
+      "lisensi": "CC BY-SA 4.0",
+      "aktif": true
+    },
+    {
+      "id": "wiki-vokal",
+      "judul": "Vokal (Wikipedia bahasa Indonesia)",
+      "penerbit": "Wikipedia",
+      "jenis": "wikipedia",
+      "judul_halaman": "Vokal",
+      "lisensi": "CC BY-SA 4.0",
+      "aktif": true
+    },
+    {
+      "id": "wiki-dwibibir",
+      "judul": "Konsonan dwibibir (Wikipedia bahasa Indonesia)",
+      "penerbit": "Wikipedia",
+      "jenis": "wikipedia",
+      "judul_halaman": "Konsonan dwibibir",
+      "lisensi": "CC BY-SA 4.0",
+      "aktif": true
+    },
+    {
+      "id": "wiki-membaca-bibir",
+      "judul": "Membaca bibir (Wikipedia bahasa Indonesia)",
+      "penerbit": "Wikipedia",
+      "jenis": "wikipedia",
+      "judul_halaman": "Membaca bibir",
+      "lisensi": "CC BY-SA 4.0",
+      "aktif": true
+    },
+    {
+      "id": "wiki-terapi-wicara",
+      "judul": "Terapi wicara (Wikipedia bahasa Indonesia)",
+      "penerbit": "Wikipedia",
+      "jenis": "wikipedia",
+      "judul_halaman": "Terapi wicara",
+      "lisensi": "CC BY-SA 4.0",
+      "aktif": true
+    }
+  ]
+}
