@@ -72,14 +72,13 @@ def test_semua_item_punya_urutan_dan_id_unik():
 # ------------------------------------------------------------------ mencatat
 
 
-def test_tiga_berhasil_jadi_sudah_bisa_dan_empat_berhasil_tuntas():
+def test_tiga_berhasil_jadi_sudah_bisa_dan_tidak_dilatih_lagi_sementara():
     s = otak.StatusAnak()
-    for _ in range(3):
+    for _ in range(2):
         catat(s, "t1-a", True)
-    assert 0.85 <= otak.p_kini(s, "a", 1, T0) < 0.95
     assert "t1-a" in [it.id for it in otak._kandidat(s, T0)]
     catat(s, "t1-a", True)
-    assert otak.p_kini(s, "a", 1, T0) >= 0.95
+    assert 0.85 <= otak.p_kini(s, "a", 1, T0) < 0.95
     assert "t1-a" not in [it.id for it in otak._kandidat(s, T0)]
 
 
@@ -374,28 +373,36 @@ def test_kata_dengan_h_baru_terbuka_setelah_h_dilatih_di_suku_kata():
 # ------------------------------------------------------------ level dan riwayat
 
 
-def test_anak_baru_hanya_level_1_terbuka_dan_latihan_dari_level_1():
+def test_anak_baru_hanya_level_1_terbuka_dan_latihan_tidak_melewati_level_terbuka():
     s = otak.StatusAnak()
     peta = otak.status_level(s, T0)
     assert peta["level_sekarang"] == 1
     assert [lv["status"] for lv in peta["level"]] == ["terbuka"] + ["terkunci"] * 5
-    for _ in range(20):
+    level_dipakai = []
+    for _ in range(40):
+        batas = otak.level_terbuka_tertinggi(s, T0)
         pilihan = otak.pilih_berikutnya(s, T0)
-        assert pilihan.item.level == 1
+        assert pilihan.item.level <= batas
+        level_dipakai.append(pilihan.item.level)
         otak.catat_percobaan(s, pilihan.item, True, len(pilihan.item.urutan), T0)
+    assert level_dipakai[:5] == [1] * 5 and max(level_dipakai) > 1  # naik level setelah maju
 
 
-def test_level_berikutnya_terbuka_setelah_60_persen_dan_tuntas_dapat_3_bintang():
+def test_level_berikutnya_terbuka_setelah_40_persen_dan_tuntas_dapat_3_bintang():
     s = otak.StatusAnak()
-    for b in ("a", "i", "u"):
+    for b in ("a", "i"):
         s.kc[(b, 1)] = otak.KC(p=0.9, n=4, terakhir=T0)
     peta = {lv["level"]: lv for lv in otak.status_level(s, T0)["level"]}
-    assert peta[1]["kemajuan"] == pytest.approx(0.5) and peta[2]["status"] == "terkunci"
+    assert peta[1]["kemajuan"] == pytest.approx(1 / 3, abs=1e-3) and peta[2]["status"] == "terkunci"
+    s.kc[("u", 1)] = otak.KC(p=0.9, n=4, terakhir=T0)
+    peta = {lv["level"]: lv for lv in otak.status_level(s, T0)["level"]}
+    assert peta[1]["kemajuan"] == pytest.approx(0.5) and peta[2]["status"] == "terbuka"
     for b in ("a", "i", "u"):
         s.kc[(b, 2)] = otak.KC(p=0.9, n=4, terakhir=T0)
     peta = {lv["level"]: lv for lv in otak.status_level(s, T0)["level"]}
     assert (peta[1]["status"], peta[1]["bintang"]) == ("tuntas", 3)
     assert peta[2]["status"] == "terbuka" and peta[3]["status"] == "terkunci"
+    assert otak.AMBANG_BUKA_LEVEL == 0.4
     assert otak.status_level(s, T0)["level_sekarang"] == 2
 
 
@@ -429,3 +436,17 @@ def test_riwayat_hanya_menyimpan_60_hari_terakhir():
     for hari in range(70):
         catat(s, "t1-a", True, waktu=T0 - timedelta(days=hari))
     assert len(s.riwayat) == 60 and min(s.riwayat) == "2026-09-16"
+
+
+def test_penguatan_diselingi_bukan_terus_menerus():
+    s = otak.StatusAnak()
+    for _ in range(3):
+        catat(s, "t1-a", True)  # "a" sudah bisa: bahan penguatan
+    s.jendela = [False, False, True, False, False, True]
+    s.gagal_beruntun, s.turun = 0, None
+    pertama = otak.pilih_berikutnya(s, T0)
+    assert pertama.alasan == "penguatan" and pertama.item.id == "t1-a"
+    otak.catat_percobaan(s, pertama.item, True, 1, T0)
+    s.jendela = [False, False, True, False, False, True]  # masih sering gagal
+    kedua = otak.pilih_berikutnya(s, T0)
+    assert kedua.alasan != "penguatan" and kedua.item.id != "t1-a"

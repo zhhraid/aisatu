@@ -74,6 +74,7 @@ class StatusAnak:
     sintetis: bool = False  # True untuk data demo buatan
     # Riwayat per tanggal WIB: {"percobaan", "berhasil", "kc": {"bunyi:tingkat": p terakhir hari itu}}
     riwayat: dict[str, dict] = field(default_factory=dict)
+    tadi_penguatan: bool = False  # latihan terakhir adalah item yang sudah dikuasai
 
     def ambil(self, bunyi: str, tingkat: int) -> KC:
         kunci = (bunyi, tingkat)
@@ -105,6 +106,7 @@ class StatusAnak:
             "hari_latihan": list(self.hari_latihan),
             "sintetis": self.sintetis,
             "riwayat": self.riwayat,
+            "tadi_penguatan": self.tadi_penguatan,
         }
 
     @classmethod
@@ -131,6 +133,7 @@ class StatusAnak:
         status.hari_latihan = list(d.get("hari_latihan", []))
         status.sintetis = d.get("sintetis", False)
         status.riwayat = {t: {**r, "kc": dict(r.get("kc", {}))} for t, r in d.get("riwayat", {}).items()}
+        status.tadi_penguatan = d.get("tadi_penguatan", False)
         return status
 
 
@@ -212,6 +215,7 @@ def catat_percobaan(
         hasil = {b: True for b in item.urutan[:posisi] if b != macet}
         hasil[macet] = False
 
+    bkt_sebelum = {b: p_kini(status, b, item.tingkat, sekarang) for b in item.bunyi}
     perubahan = []
     param = PARAM[item.tingkat]
     for bunyi, ok in hasil.items():
@@ -239,6 +243,8 @@ def catat_percobaan(
     status.jendela = (status.jendela + [berhasil])[-UKURAN_JENDELA:]
     status.ulang_beruntun = status.ulang_beruntun + 1 if status.item_terakhir == item.id else 1
     status.item_terakhir = item.id
+    # Latihan yang sebelumnya sudah dikuasai dihitung sebagai penguatan.
+    status.tadi_penguatan = all(p >= AMBANG_SUDAH_BISA for p in bkt_sebelum.values())
     status.percobaan_terakhir = sekarang
 
     status.turun = None
@@ -307,7 +313,8 @@ def _kemajuan(status: StatusAnak, bunyi: str, tingkat: int, sekarang: datetime) 
     return min(1.0, p_kini(status, bunyi, tingkat, sekarang) / AMBANG_SUDAH_BISA)
 
 
-AMBANG_BUKA_LEVEL = 0.6
+# 40%: dipilih lewat simulasi; 60% menahan anak terlalu lama di level awal.
+AMBANG_BUKA_LEVEL = 0.4
 
 
 def status_level(status: StatusAnak, sekarang: datetime) -> dict:
@@ -379,14 +386,12 @@ def _sudah_lewat(status: StatusAnak, item: Item, sekarang: datetime) -> bool:
 
 
 def _masih_tuntas(status: StatusAnak, item: Item, sekarang: datetime) -> bool:
-    """Item yang pernah tuntas baru diulang setelah turun di bawah "sudah bisa",
-    supaya sedikit lupa tidak langsung memenuhi sesi dengan ulangan."""
-    p = p_item(status, item, sekarang)
-    if p >= AMBANG_TUNTAS:
-        return True
-    return p >= AMBANG_SUDAH_BISA and all(
-        (k := status.kc.get((b, item.tingkat))) is not None and k.tuntas for b in item.bunyi
-    )
+    """Item yang sudah "sudah bisa" tidak dilatih lagi sampai turun karena lupa.
+
+    Dipilih lewat simulasi (skrip/simulasi_otak.py): menunggu sampai 95% membuat anak
+    terus mengulang yang sudah hampir dikuasai dan lebih sedikit belajar hal baru.
+    """
+    return p_item(status, item, sekarang) >= AMBANG_SUDAH_BISA
 
 
 def _terbuka(status: StatusAnak, sekarang: datetime) -> list[Item]:
@@ -458,7 +463,9 @@ def pilih_berikutnya(
     alasan = "zona"
     tingkat_ada = sorted({it.tingkat for it in kandidat})
     laju = tingkat_berhasil(status)
-    if laju is not None and laju < BATAS_BAWAH:
+    # Penguatan diselingi: tidak pernah dua latihan mudah berturut-turut, supaya anak
+    # yang sering gagal tetap mendapat bahan baru (lihat skrip/simulasi_otak.py).
+    if laju is not None and laju < BATAS_BAWAH and not status.tadi_penguatan:
         # Terlalu sering gagal: beri latihan yang kemungkinan besar berhasil, termasuk
         # yang sudah tuntas, supaya tingkat berhasil kembali ke rentang target.
         mudah = [it for it in _terbuka(status, sekarang) if perkiraan_item(status, it, sekarang) >= BATAS_BAWAH]

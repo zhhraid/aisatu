@@ -162,9 +162,8 @@ def test_alur_sesi_sampai_naik_tingkat(klien):
             json={"item_id": berikut["item"]["id"], "berhasil": True, "langkah_tercapai": 1},
         ).json()
         berikut = jawab["berikutnya"]
-    # "a" tiga kali (batas ulang berturut-turut), selingan "i", "a" sekali lagi sampai tuntas,
-    # lalu lima berhasil beruntun menaikkan tingkat.
-    assert urutan_id == ["t1-a", "t1-a", "t1-a", "t1-i", "t1-a", "t2-a"]
+    # "a" tiga kali sampai "sudah bisa", lalu "i", lalu lima berhasil beruntun menaikkan tingkat.
+    assert urutan_id == ["t1-a", "t1-a", "t1-a", "t1-i", "t1-i", "t2-a"]
     assert jawab["tingkat_berhasil"] == 1.0
 
     peta = klien.get("/ai/anak/raka/peta").json()
