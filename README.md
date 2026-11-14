@@ -20,7 +20,7 @@ Sudah diuji:
 
 Belum diuji, dan harus kalian lakukan:
 
-- **Ambang aturan bibir belum diuji dengan wajah yang bergerak.** Angka bawaan di `mata/src/aturan.ts` ditentukan dari perilaku blendshape MediaPipe saat bicara biasa, bukan dari pengukuran, dan dijamin tidak tumpang tindih (tes `cekTumpang`). Untuk wajah tertentu, pakai **Setel otomatis** di halaman uji.
+- **Ambang aturan bibir baru diuji pada satu wajah asli (7 rekaman, 5 benar).** Dua batas sudah disetel dari hasil itu; lihat `data/evaluasi/README.md`. Untuk wajah tertentu, pakai **Setel otomatis** di halaman uji.
 - **Belum pernah dicoba pada anak tunarungu.**
 - **Panggilan ke Gemini sungguhan.** Klien HTTP-nya diuji dengan server tiruan dan alamat Gemini sudah dipastikan ada, tapi belum pernah dipanggil dengan kunci API asli.
 - **Kecepatan di HP.** Di lingkungan uji tanpa GPU hanya 6 sampai 9 frame per detik. Halaman uji menampilkan angka ini; cek di laptop sekolah dan HP Android murah.
