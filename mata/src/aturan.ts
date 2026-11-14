@@ -35,23 +35,26 @@ export interface Ambang {
  * Untuk wajah tertentu, setelOtomatis() menghitung ambang dari contoh bentuk orang itu.
  */
 export const AMBANG_BAWAAN: Ambang = {
+  // Batas kebulatan bersama 0,15: diturunkan dari 0,25-0,35 setelah uji di aplikasi tim
+  // mengukur mouthPucker hanya 0,08 untuk "u" yang benar. Kebulatan kini juga dibaca dari
+  // penyempitan mulut (fitur.ts). Tidak diturunkan lebih jauh karena wajah diam pun
+  // bergoyang sekitar 0,05.
   // "a": rahang paling terbuka, bibir tidak membulat.
-  a: { rahangMin: 0.3, bulatMaks: 0.25 },
+  a: { rahangMin: 0.3, bulatMaks: 0.15 },
   // "i": bibir melebar, rahang hampir tertutup, tidak membulat.
   // rahangMaks 0,15 (bukan 0,12): pada uji wajah asli, "i" yang diucapkan biasa dikira "e".
   i: { lebarMin: 0.15, rahangMaks: 0.15, bulatMaks: 0.15 },
   // "u": paling membulat, rahang hampir tertutup.
-  // bulatMin 0,30 (bukan 0,35): pada uji di aplikasi, "u" yang benar sulit lolos.
-  u: { bulatMin: 0.3, rahangMaks: 0.12 },
+  u: { bulatMin: 0.2, rahangMaks: 0.12 },
   // "o": membulat dengan rahang terbuka sedang, di antara "u" dan "a".
-  o: { bulatMin: 0.25, rahangMin: 0.12, rahangMaks: 0.45 },
+  o: { bulatMin: 0.15, rahangMin: 0.12, rahangMaks: 0.45 },
   // Bibir rapat: celah hampir nol, tidak membulat (bukan "u"), tidak melebar (bukan "i").
-  M: { celahMaks: 0.02, rahangMaks: 0.15, tekanMin: 0, bulatMaks: 0.25, lebarMaks: 0.15, gulungMaks: 0.12 },
+  M: { celahMaks: 0.02, rahangMaks: 0.15, tekanMin: 0, bulatMaks: 0.15, lebarMaks: 0.15, gulungMaks: 0.12 },
   // "e": rahang terbuka sedang, di antara "i" (hampir tertutup) dan "a" (lebar), tidak membulat.
-  e: { rahangMin: 0.15, rahangMaks: 0.3, bulatMaks: 0.25 },
+  e: { rahangMin: 0.15, rahangMaks: 0.3, bulatMaks: 0.15 },
   // "f/v": bibir bawah tergulung ke bawah gigi atas, rahang hampir tertutup.
   // gulungMin 0,12 (bukan 0,2): pada uji wajah asli, "f" dikira bibir rapat.
-  F: { gulungMin: 0.12, rahangMaks: 0.15, bulatMaks: 0.25, lebarMaks: 0.15 },
+  F: { gulungMin: 0.12, rahangMaks: 0.15, bulatMaks: 0.15, lebarMaks: 0.15 },
   H: { celahMin: 0.02 },
   // Dinilai sebagian: hanya posisi mulut yang terlihat, bukan lidah.
   S: { rahangMaks: 0.15, bulatMaks: 0.35, celahMin: 0.005 },

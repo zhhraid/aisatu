@@ -54,7 +54,7 @@ Perbaikan:
 - Kebulatan kini juga dibaca dari **penyempitan mulut**: jarak sudut bibir kiri-kanan dibagi
   lebar wajah, dibanding saat netral. Penyempitan 20% setara kebulatan 0,4.
 - Penyempitan yang wajar karena rahang terbuka ("a") dikurangi, supaya "a" tidak terbaca membulat.
-- Batas kebulatan "u" diturunkan 0,35 → 0,30.
+- Batas kebulatan diturunkan: "u" 0,35 → 0,20, "o" 0,25 → 0,15, dan batas "tidak membulat" untuk a, e, m/b/p, f ikut 0,25 → 0,15 (batas bersama, `cekTumpang` tetap bersih). Pengukuran tim dengan `?debug` mencatat `mouthPucker` hanya 0,08 untuk "u" yang benar; batas tidak diturunkan sampai 0,06 karena wajah diam pun bergoyang sekitar 0,05.
 
 Belum diuji ulang dengan wajah asli. Untuk tiap anak, Setel otomatis dan model personal tetap cara
 paling andal menyesuaikan penilai dengan wajahnya.
