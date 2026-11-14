@@ -147,7 +147,8 @@ export function koordinatBentuk(bentuk: BentukTutorial): Record<number, Titik2D>
     const lekuk = 0.018 * Math.exp(-Math.pow((t - 0.5) / 0.07, 2));
     return busur + lekuk;
   });
-  isi(LUAR_BAWAH, p.lebar, (t) => (separuh + p.tebalBawah) * lengkung(t, p.bulat) - 2 * naik);
+  // Untuk f/v bibir bawah naik di tengah; sudut mulut tetap di tempatnya.
+  isi(LUAR_BAWAH, p.lebar, (t) => (separuh + p.tebalBawah) * lengkung(t, p.bulat) - naik - naik * lengkung(t, 0));
   return hasil;
 }
 

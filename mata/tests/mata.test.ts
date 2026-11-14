@@ -368,6 +368,15 @@ describe('tutorial bibir a-z', () => {
     expect(lebar('o')).toBeGreaterThan(lebar('u'));
   });
 
+  it('sudut mulut sama untuk bibir atas dan bawah di semua bentuk', () => {
+    for (const h of ABJAD) {
+      const t = koordinatBentuk(h.bentuk);
+      // Titik 61 dan 291 dipakai garis atas dan bawah sekaligus; keduanya harus sejajar.
+      expect(t[61]!.y).toBeCloseTo(t[291]!.y);
+      expect(t[61]!.y).toBeCloseTo(t[78]!.y, 1);
+    }
+  });
+
   it('bibir dalam bawah tidak pernah di atas bibir dalam atas', () => {
     for (const h of ABJAD) {
       const t = koordinatBentuk(h.bentuk);
