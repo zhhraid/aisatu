@@ -263,27 +263,31 @@ export function setelOtomatis(contoh: Record<Bunyi, Fitur>): HasilSetel {
   const maks = Math.max;
   const min = Math.min;
 
-  syarat(a.rahang - maks(o.rahang, i.rahang) >= JARAK_MIN, '"a" belum cukup lebih terbuka daripada "o" dan "i". Buka mulut lebih lebar saat "a".');
+  // Tiap pasangan bentuk cukup dibedakan oleh SATU ciri; syarat lain tidak perlu.
+  // a vs o dan a vs u: kebulatan. a vs i: rahang. o vs u: rahang. i vs lainnya: lebar.
+  // Bibir rapat vs a/o: celah; vs u: kebulatan; vs i: lebar.
+  syarat(a.rahang - maks(i.rahang, M.rahang) >= JARAK_MIN, '"a" belum cukup lebih terbuka daripada "i". Buka mulut lebih lebar saat "a".');
   syarat(o.rahang - u.rahang >= JARAK_MIN, '"o" dan "u" terlalu mirip. Buka rahang sedikit saat "o", rapatkan saat "u".');
   syarat(min(o.bulat, u.bulat) - maks(a.bulat, i.bulat, M.bulat) >= JARAK_MIN, '"o" dan "u" belum cukup membulat dibandingkan "a", "i", dan bibir rapat.');
   syarat(i.lebar - maks(a.lebar, o.lebar, u.lebar, M.lebar) >= JARAK_MIN, '"i" belum cukup melebar. Tarik bibir ke samping saat "i".');
-  syarat(min(a.celah, i.celah, u.celah, o.celah) - M.celah >= JARAK_MIN_CELAH, 'Bibir rapat belum cukup berbeda dari bunyi lain. Rapatkan bibir sepenuhnya saat "m".');
+  syarat(min(a.celah, o.celah) - M.celah >= JARAK_MIN_CELAH, 'Bibir belum benar-benar rapat saat "m". Rapatkan kedua bibir sepenuhnya.');
   if (masalah.length) return { ok: false, masalah };
 
   // Batas bersama: angka yang sama dipakai dua bentuk, jadi keduanya tidak bisa lolos bersamaan.
   const batasBulat = tengah(maks(a.bulat, i.bulat, M.bulat), min(o.bulat, u.bulat));
   const batasRahangUo = tengah(u.rahang, o.rahang);
-  const batasRahangOa = tengah(maks(o.rahang, i.rahang), a.rahang);
+  const batasRahangIa = tengah(maks(i.rahang, M.rahang), a.rahang);
   const batasLebar = tengah(maks(a.lebar, o.lebar, u.lebar, M.lebar), i.lebar);
 
   const ambang: Ambang = {
-    a: { rahangMin: batasRahangOa, bulatMaks: batasBulat },
-    i: { lebarMin: batasLebar, rahangMaks: batasRahangOa, bulatMaks: min(tengah(i.bulat, min(o.bulat, u.bulat)), batasBulat) },
+    a: { rahangMin: batasRahangIa, bulatMaks: batasBulat },
+    i: { lebarMin: batasLebar, rahangMaks: batasRahangIa, bulatMaks: min(tengah(i.bulat, min(o.bulat, u.bulat)), batasBulat) },
     u: { bulatMin: maks(tengah(maks(a.bulat, i.bulat, M.bulat), u.bulat), batasBulat), rahangMaks: batasRahangUo },
-    o: { bulatMin: batasBulat, rahangMin: batasRahangUo, rahangMaks: maks(batasRahangOa, tengah(o.rahang, a.rahang)) },
+    // Batas atas "o" longgar: "o" yang terbuka lebar tetap dibedakan dari "a" oleh kebulatan.
+    o: { bulatMin: batasBulat, rahangMin: batasRahangUo, rahangMaks: maks(o.rahang + 0.2, a.rahang) },
     M: {
-      celahMaks: tengah(M.celah, min(a.celah, i.celah, u.celah, o.celah)),
-      rahangMaks: min(maks(M.rahang + 0.1, 0.1), batasRahangOa),
+      celahMaks: tengah(M.celah, min(a.celah, o.celah)),
+      rahangMaks: min(maks(M.rahang + 0.1, 0.1), batasRahangIa),
       tekanMin: 0,
       bulatMaks: batasBulat,
       lebarMaks: batasLebar,

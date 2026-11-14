@@ -437,6 +437,22 @@ describe('ambang dan penyetelan otomatis', () => {
     expect(cekTumpang(hasil.ambang)).toEqual([]);
   });
 
+  it('kasus nyata: o lebih terbuka dari a dan u hampir rapat tetap bisa disetel', () => {
+    // Laporan uji pertama dengan wajah asli: "a" tidak lebih terbuka dari "o", dan celah "u"
+    // sekecil bibir rapat. Keduanya tetap bisa dibedakan dari kebulatan bibir.
+    const orang = {
+      ...ORANG,
+      o: { ...ORANG.o, rahang: 0.38 },
+      u: { ...ORANG.u, celah: 0.004 },
+    };
+    const hasil = setelOtomatis(orang);
+    expect(hasil.ok).toBe(true);
+    if (!hasil.ok) return;
+    for (const b of SEMUA) {
+      expect(SEMUA.filter((x) => nilaiBentuk(x, orang[b], hasil.ambang).cocok), b).toEqual([b]);
+    }
+  });
+
   it('bentuk yang terlalu mirip dilaporkan, bukan disetel diam-diam', () => {
     const mirip = { ...ORANG, o: { ...ORANG.o, rahang: 0.06, bulat: 0.44 } };
     const hasil = setelOtomatis(mirip);

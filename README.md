@@ -15,7 +15,7 @@ Video dan suara tidak pernah keluar dari browser. Yang dikirim ke backend hanya 
 Sudah diuji:
 
 - Backend: 109 tes otomatis (rumus BKT, pemilih latihan, usulan tugas, pagar keluaran LLM, semua endpoint).
-- Mata: 42 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
+- Mata: 43 tes otomatis (aturan bibir, fitur, kalibrasi, penilai percobaan, penentu suara).
 - Alur penuh di Chromium dengan kamera tiruan (foto wajah contoh sebagai video): model termuat, wajah terbaca, kalibrasi berhasil, percobaan dinilai, hasil terkirim ke Otak, Otak memilih latihan berikutnya.
 
 Belum diuji, dan harus kalian lakukan:
